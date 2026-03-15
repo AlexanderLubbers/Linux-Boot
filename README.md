@@ -1,24 +1,22 @@
-# Custom_Bootloader
-## Quick summary of how I think the bootloader works
-* mbr.asm is first loaded by BIOS
-* mbr then loads the kernel from the disk before converting the mode to 32 bit protected mode
-* The control is then given to the kernel
-* by transferring control to the kernel, execution begins at _start
-## CPU
-### Registers
-* They are the working memory of the central processing unit
-* Registers have different purposes
-* Each have a specific size
-* 32 bit systems have 32 bit registers and so on
-* x86 assembly was made for 32 bit systems
-* x86 assembly is compatible with x64 due to backwards compatibility
-* the term x86 assembly came from the Intel 8086 processor
-### Stack
-* region of memory
-* last in first out data structure (LIFO)
-* is an array
-* stack pointer. a special CPU register that points to the top of the stack. it automatically updates
-* Random access
-## Inspiration
-A lot of the code is from:
-https://dev.to/frosnerd/writing-my-own-boot-loader-3mld
+# Linux Boot
+
+This is a custom bootloader that is capable of booting any linux kernel
+
+## About Me
+
+I am a Purdue CS student interested in embedded systems, operating system design, and artificial intelligence. I am making this to learn more about how computers work on a low level in addition to getting an introduction to the workings of operating system kernels.
+
+## My Goals For This Project
+* learn assembly
+* learn about how assembly interacts with the CPU
+* learn more about how computer hardware and memory interacts with software
+* learn more about how the linux kernel works
+* master the start up process of computers
+* learn more about how CPUs work
+* make a fully functional bootloader that can boot a linux kernel
+
+## Steps To Accomplish This Goal
+
+Since I was relatively new to CS at the time of starting this project, The first step to my project will be learning the basics, so first, I will start simple. The starting phase of my project will involve me writing a "Hello World" bootloader that will print "Hello World" to the screen.
+
+Phase two of this project will involve implementing the bootloader and slowly learning all the things that come along with that task.
