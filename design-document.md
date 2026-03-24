@@ -23,7 +23,12 @@ BIOS is generally not the best. It cannot support all devices and does not even 
 ### Environment
 Since most linux operating systems use Long Mode (>99%), excluding embedded systems that require extreme resource efficiency, it makes the most sense to have this bootloader support Long Mode.
 
+### Bootloader Architecture
+Single stage bootloaders require that everything fits into the Master Boot Record which means that there is going to be about 446 bytes of usable data for the code. For the scope and goals of this project, 446 bytes is simply not enough space to do everything the bootloader must do. Because of this, a two stage bootloader design is going to be implemented.
+
 ### Operational Logic
+
+### Features
 
 ## Appendix
 
@@ -39,3 +44,8 @@ In theory, with Long Mode, 16 Exabytes of memory of address space is possible, b
 
 ### Paging
 The idea behind paging is to break programs into smaller fixed size blocks called pages. This means that the process does not have to be allocated in contiguous memory space helping solve the problem of fragmentation as well as the whole process not having to be in main memory. This means that some pages can be put away while other pages are using the main memory and when a certain page is needed, it can simply be loaded. This allows for more processes and processes larger than main memory to run.
+
+### POST
+Power-On-Self-Test. The instant a computer is turned on, a diagnostic process called POST is run on the motherboard's firmware. If the diagnostics indicate the the computer's firmware is working as intended, then the comptuer will then serach for a bootable device
+
+### Master Boot Record
