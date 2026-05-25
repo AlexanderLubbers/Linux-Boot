@@ -28,6 +28,16 @@ Single stage bootloaders require that everything fits into the Master Boot Recor
 
 ### Operational Logic
 
+stage 1:
+set up segments and stack, and then load stage two of the bootloader
+
+
+stage: 2
+
+perform memory map detection, detect available video modes, load files, enable A20, load a global descriptor table,
+enter protected mode, and then finally load second stage of bootloader, stack set up, segment register initialization, A20 verification
+
+
 ### Features
 
 ## Appendix
@@ -46,6 +56,17 @@ In theory, with Long Mode, 16 Exabytes of memory of address space is possible, b
 The idea behind paging is to break programs into smaller fixed size blocks called pages. This means that the process does not have to be allocated in contiguous memory space helping solve the problem of fragmentation as well as the whole process not having to be in main memory. This means that some pages can be put away while other pages are using the main memory and when a certain page is needed, it can simply be loaded. This allows for more processes and processes larger than main memory to run.
 
 ### POST
-Power-On-Self-Test. The instant a computer is turned on, a diagnostic process called POST is run on the motherboard's firmware. If the diagnostics indicate the the computer's firmware is working as intended, then the comptuer will then serach for a bootable device
+Power-On-Self-Test. The instant a computer is turned on, a diagnostic process called POST is run on the motherboard's firmware. If the diagnostics indicate the the computer's firmware is working as intended, then the comptuer will then search for a bootable device. BIOS firmware will initialize will initialize CPU, memory, and other hardware components. BIOS firmware code is copied from ROM to RAM for faster execution.
 
 ### Master Boot Record
+BIOS checks bootable devices for boot signatures. A bootable device is any sort of hardware that contains the instructions needed to boot a computer. The boot signature is in the boot sector which is sector number 0 and contains the byte sequence 0x55(byte offset 510) and 0xAA(byte offset 511). The bootsector should be loaded into memory at 0x0000:0x7c00.
+
+### IDT
+Interupt descriptor table. protected mode version of the real mode interrupt vector table. its a table of descriptors that says if this interrupt fires,
+call this handler function
+
+### Segments
+logical, and variable sized chunk of memory that is used to organize data. rather than having a large contiguous memory space, The OS breaks a program's memory into meaningful chunks. each segment holds a logical part of the program
+
+### ROM vs RAM
+RAM is random access memory. It is fast, temporary, volatile, and is used by the CPU to hold relavent data. ROM is read only memory, and it is slow and permanent. It retains its memory without power, and is used to store important firmware like startup instructions.
