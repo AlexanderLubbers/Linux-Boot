@@ -70,3 +70,21 @@ logical, and variable sized chunk of memory that is used to organize data. rathe
 
 ### ROM vs RAM
 RAM is random access memory. It is fast, temporary, volatile, and is used by the CPU to hold relavent data. ROM is read only memory, and it is slow and permanent. It retains its memory without power, and is used to store important firmware like startup instructions.
+
+### Memory Map
+needs to be verified
+
+0x00000 - 0x003FF   Interrupt Vector Table (BIOS uses this)
+0x00400 - 0x004FF   BIOS Data Area
+0x00500 - 0x07BFF   Free memory (stack grows down into here)
+0x07C00 - 0x07DFF   Your bootloader (512 bytes)
+0x07E00 - 0x9FFFF   Free memory (second stage, kernel, etc)
+0xA0000 - 0xFFFFF   BIOS, video memory, ROM (don't touch this)
+
+### TODO
+Stage 1:
+* set up segment registers (cs, ds, es, ss) so CPU knows where everything is (code, data, stack)
+* set up stack -> done
+* figure out how to load second boot loader stage
+* enable A20
+* set up sections

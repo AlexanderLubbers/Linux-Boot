@@ -22,4 +22,8 @@ I am a Purdue CS student interested in embedded systems, operating system design
 * Custom Global Descriptor Table
 * Custom Paging system and Paging table
 * Startup message and OS selection screen
-* 
+
+## How I plan on achieving this goal
+* step one: make a hello world bootloader to learn assembly and bootloader basics -> done
+* step two: make a bootloader that parses an elf kernel and hands over control control to kernel in long mode to get a strong grasp on bootloader concepts
+* step three: modify the bootloader so that it can boot any linux kernel

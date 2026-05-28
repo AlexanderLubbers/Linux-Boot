@@ -1,6 +1,9 @@
 [BITS 16] ; produce 16 bit code since we are on 16bit real mode right now
 [ORG 0x7c00] ; address in which BIOS loads bootloader. tells assembler that code will be loaded at the given address
 
+
+%include "debug/debug-real.asm"
+
 start:
     cli
     ; zero out CPU registers to gurantee a clean state
@@ -10,27 +13,7 @@ start:
     mov ss, ax ; stack segment
     mov sp, 0x7c00 ; stack starts below bootloader and grows to lower addresses
     sti ; interupts enabled after the next instruction
-    cld ; reset direction flag
-    mov si, msg ; source index register. points to source of memory operation. commonly used for string and arrays
     call print
-
-hang:
-    jmp hang
-print:
-    mov ah, 0x0E ; Teletype output
-.loop:
-    lodsb ; load next byte
-    cmp al, 0
-    je .done
-    int 10h ; teletype output to print char in al register and advance the cursor
-    jmp .loop
-
-.done:
-    ret
-
-
-msg : db 'Test', 0 ; db can take a comma separated list of bytes. 'Test' is expanded to comma separated list of bytes
-
 ; times = repeating following instruction n times
 ; $ = current addess
 ; $$ = start address
@@ -38,4 +21,3 @@ msg : db 'Test', 0 ; db can take a comma separated list of bytes. 'Test' is expa
 times 510 - ($ - $$) db 0 ; pad until you reach a total of 510 bytes
 
 dw 0xAA55 ; boot signature
-

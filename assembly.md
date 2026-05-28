@@ -283,6 +283,174 @@ CR4 is used for advanced CPU features
 
 virtual address -> page tables -> physical address
 
+ - How do brackets work?
+
+brackets means memory dereferencing
+```
+mov rbx, rax ;  move the value at rax into rbx register
+mov rbx, [rax] ; treat value of rax as a memory address, go to that memory address, retrieve the value and put it in rbx
+```
+
+-  Conditional Assembly
+
+tell the assembler to include or exclude blocks depending on conditions
+```
+; comment out the undef to enable the LINUX "do things" code
+%define WINDOWS
+%undef WINDOWS
+%ifdef WINDOWS
+; perform operations for windows
+%else
+; do something else
+%endif
+```
+
+ - Alignment
+
+use `align` to align something to a given boundary like for example an 8 byte boundary
+
+ - Include
+
+`%include "file.asm"` to include other assembly files
+
+Include guards
+
+```
+; at the top of gdt.asm
+%ifndef GDT_ASM
+%define GDT_ASM
+
+    ; ... all your gdt code ...
+
+%endif
+```
+
+ - Structures
+
+EX
+
+```
+struc MemoryMapEntry
+    .base:      resq 1    ; 8 bytes — base address
+    .length:    resq 1    ; 8 bytes — length of region
+    .type:      resd 1    ; 4 bytes — type (1=usable, 2=reserved, etc)
+    .acpi:      resd 1    ; 4 bytes — ACPI extended attributes
+endstruc
+```
+
+how to use a struct
+
+EX:
+```
+; say RBX points to a MemoryMapEntry in memory
+mov rax, [rbx + MemoryMapEntry.base]    ; read the base address field
+mov rcx, [rbx + MemoryMapEntry.length]  ; read the length field
+mov edx, [rbx + MemoryMapEntry.type]    ; read the type field
+```
 
 ## How to calculate physical address
 physical address = 16 * segment + offset
+
+## Table of commonly used instructions
+
+```
+ADC - add a value, plus 
+ADD - add two registers together
+DEC - decrement by 1
+DIV - unsigned divide
+IDIV - signed divide
+IMUL - signed multiply
+INC - increment by 1
+MUL - unsigned multiply
+NEG - two's complement (multiply by -1)
+SBB - subtract with borrow (carry flag)
+SUB - subtract
+LEA - load effective address (formed by some expression / addressing mode) into register
+
+AND - logical AND two registers together
+NOT - one's complement (invert all the bits in the operand)
+OR - logical OR
+XOR - logical exclusive or
+TEST - logical compare
+
+CALL - call a subroutine/function/procedure
+SYSCALL - call an OS function (Linux, Mac)
+ENTER - make stack for procedure parameters
+LEAVE - high level procedure exit
+RET - return from subroutine
+CMP - compare two operands
+JA - jump if result of unsigned compare is above
+JAE - jump if result of unsigned compare is above or equal
+JB - jump if result of unsigned compare is below
+JBE - jump if result of unsigned compare is below or equal
+JC - jump if carry flag is set
+JE - jump if equal
+JG - jump if greater than 
+JGE - jump if greater than or equal
+JNC - jump if carry not set
+JMP - go to / jmp (simply loads the RPC register with the address)
+
+BT - bit test (test a bit)
+BTC - bit test and complement
+BTR - bit test and reset
+BTS - bit test and set
+RCL - rotate 9 bits (carry flag, 8 bits in operand) left count bits
+RCR - rotate 9 bits (carry flag, 8 bits in operand) right count bits
+ROL - rotate 8 bits in operand left count bits
+ROR - rotate 8 bits in operand right count bits
+SAL - arithmetic shift operand left count bits
+SAR - arithmetic shift operand right count bits (maintains sign bit)
+SHL - logical shift operand left count bits (same as SAL)
+SHR - logical shift operand right count bits (does not maintain sign bit)
+
+MOV - move register to register, move register to memory, move memory to register
+XCHG - exchange register/memory with register
+CBW - convert byte to word
+CDQ - convert word to double word/convert double word to quad word
+
+CLC - clear carry flag/bit in flags register
+CLD - clear direction bit in flags register
+STC - set carry flag
+STD - set direction flag
+
+POP - pop a register off the stack
+POPF - pop stack into flags register
+PUSH - push a register on the stack
+PUSHF - push flags register on the stack
+```
+
+borrowed from here:
+https://github.com/mschwartz/assembly-tutorial#permissions-sections-and-privileged-instructions
+
+## Assembly Directives
+ - code generation
+EX:
+`[BITS 16]`
+
+ - Origin
+
+`[ORG 0x7c00]`
+
+This is where we will be in memory when calculating addresses
+
+ - Data Definition
+
+```
+db 0x55           ; define byte  (1 byte)
+dw 0x1234         ; define word  (2 bytes)
+dd 0xDEADBEEF     ; define dword (4 bytes)
+dq 0x123456789    ; define qword (8 bytes)
+
+db "Hello", 0     ; string followed by null terminator
+```
+
+ - Section Directives
+
+These are also assembly directives
+
+EX:
+```
+section .text     ; code goes here
+section .data     ; initialized data goes here
+section .bss      ; uninitialized data goes here
+```
