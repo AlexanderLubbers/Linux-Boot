@@ -34,8 +34,10 @@ set up segments and stack, and then load stage two of the bootloader
 
 stage: 2
 
-perform memory map detection, detect available video modes, load files, enable A20, load a global descriptor table,
-enter protected mode, and then finally load second stage of bootloader, stack set up, segment register initialization, A20 verification
+perform memory map detection, detect available video modes, enable A20, load a global descriptor table,
+enter protected mode
+
+TODO: Figure out how to set up Long mode
 
 
 ### Features
@@ -81,10 +83,11 @@ needs to be verified
 0x07E00 - 0x9FFFF   Free memory (second stage, kernel, etc)
 0xA0000 - 0xFFFFF   BIOS, video memory, ROM (don't touch this)
 
+To summarize what memory maps are and why they are important
+
 ### TODO
 Stage 1:
 * set up segment registers (cs, ds, es, ss) so CPU knows where everything is (code, data, stack)
 * set up stack -> done
 * figure out how to load second boot loader stage
 * enable A20
-* set up sections

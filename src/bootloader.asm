@@ -2,7 +2,7 @@
 [ORG 0x7c00] ; address in which BIOS loads bootloader. tells assembler that code will be loaded at the given address
 
 
-%include "debug/debug-real.asm"
+; %include "debug/debug-real.asm"
 
 start:
     cli
@@ -14,6 +14,27 @@ start:
     mov sp, 0x7c00 ; stack starts below bootloader and grows to lower addresses
     sti ; interupts enabled after the next instruction
     call print
+
+hang:
+    jmp hang
+
+
+print:
+    cld ; reset direction flag to go forward
+    mov ah, 0x0E ; Teletype output
+    mov si, debug
+.loop:
+    lodsb ; load next byte
+    cmp al, 0
+    je .done
+    int 10h ; teletype output to print char in al register and advance the cursor
+    jmp .loop
+
+.done:
+    ret
+
+debug : db 'debug', 0
+hardwareerr : db 'incompatible-hardware-error', 0
 ; times = repeating following instruction n times
 ; $ = current addess
 ; $$ = start address

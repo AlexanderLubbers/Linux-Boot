@@ -431,7 +431,7 @@ EX:
 
 `[ORG 0x7c00]`
 
-This is where we will be in memory when calculating addresses
+Sets the memory address where the assembler will place the code and data. It also tells the assembler how to calculate the memory labels and addresses
 
  - Data Definition
 
