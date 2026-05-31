@@ -2,7 +2,9 @@
 [ORG 0x7E00]
 
 start:
-
+    cld
+    mov si, bootmsg
+    call print
 
 hang:
     jmp hang

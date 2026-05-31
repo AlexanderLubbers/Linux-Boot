@@ -19,8 +19,7 @@ start:
     mov es, ax ; extra segment
     mov ss, ax ; stack segment
     mov sp, 0x7c00 ; stack starts below bootloader and grows to lower addresses
-    sti ; interupts enabled after the next instruction  fjdklsa
-    call print
+    sti ; interupts enabled after the next instruction
     ; read stage 2 from disk
     mov ah, 0x41
     mov bx, 0x55AA
@@ -32,17 +31,12 @@ start:
     cmp bx, 0xAA55
     jne error
 
-    align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary
-    packet: istruc DiskAddressPacket
-        at DiskAddressPacket.buffer, dd 0x7E00
-        at DiskAddressPacket.address, dq 1
-        at DiskAddressPacket.size, db 0x10
-        at DiskAddressPacket.reserved, db 0
-        at DiskAddressPacket.sectors, db KERNEL_LOADER_SECTORS
-    iend
+    mov si, debug
+    call print
 
-    mov ds, 0x00 ; segment 0, where disk address packet is located
-    mov si, DiskAddressPacket
+    mov ax, 0x00
+    mov ds, ax ; ensure that ds is pointing to segment 0
+    mov si, packet
     mov ah, 0x42
     mov dl, 0x80 ; the C drive
     int 0x13
@@ -52,8 +46,6 @@ start:
     cmp ah, 0x00
     jne error
     
-    mov si, debug
-    call print
     jmp hang
 
 error:
@@ -78,6 +70,15 @@ print:
 
 debug : db 'debug', 0
 hardwareerr : db 'incompatible-hardware-error', 0
+
+align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary. happens during assembly time
+packet: istruc DiskAddressPacket
+    at DiskAddressPacket.size, db 0x10
+    at DiskAddressPacket.reserved, db 0
+    at DiskAddressPacket.sectors, dw KERNEL_LOADER_SECTORS
+    at DiskAddressPacket.buffer, dd 0x7E00
+    at DiskAddressPacket.address, dq 1
+iend
 ; times = repeating following instruction n times
 ; $ = current addess
 ; $$ = start address
