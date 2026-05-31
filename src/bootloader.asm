@@ -1,8 +1,15 @@
 [BITS 16] ; produce 16 bit code since we are on 16bit real mode right now
 [ORG 0x7c00] ; address in which BIOS loads bootloader. tells assembler that code will be loaded at the given address
 
+KERNEL_LOADER_SECTORS equ 10 ; subject to change
 
-; %include "debug/debug-real.asm"
+struc DiskAddressPacket
+    .size resb 1 ; size of packet
+    .reserved resb 1 ; should always be zero
+    .sectors resw 1 ; number of sectors to transfer. The max is usually 127
+    .buffer resd 1 ; transfer buffer
+    .address resq 1 ; LBA address of sector to read from disk
+endstruc
 
 start:
     cli
@@ -12,9 +19,46 @@ start:
     mov es, ax ; extra segment
     mov ss, ax ; stack segment
     mov sp, 0x7c00 ; stack starts below bootloader and grows to lower addresses
-    sti ; interupts enabled after the next instruction
+    sti ; interupts enabled after the next instruction  fjdklsa
     call print
+    ; read stage 2 from disk
+    mov ah, 0x41
+    mov bx, 0x55AA
+    mov dl, 0x80
+    int 0x13 ; call BIOS disk services to check whether extended read and write services are supported
+    test cx, 0x0001
+    jz error ; bit zero of cx is not set.
+    jc error ; jump if carry flag is set
+    cmp bx, 0xAA55
+    jne error
 
+    align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary
+    packet: istruc DiskAddressPacket
+        at DiskAddressPacket.buffer, dd 0x7E00
+        at DiskAddressPacket.address, dq 1
+        at DiskAddressPacket.size, db 0x10
+        at DiskAddressPacket.reserved, db 0
+        at DiskAddressPacket.sectors, db KERNEL_LOADER_SECTORS
+    iend
+
+    mov ds, 0x00 ; segment 0, where disk address packet is located
+    mov si, DiskAddressPacket
+    mov ah, 0x42
+    mov dl, 0x80 ; the C drive
+    int 0x13
+
+    ; check whether operation was successful
+    jc error
+    cmp ah, 0x00
+    jne error
+    
+    mov si, debug
+    call print
+    jmp hang
+
+error:
+    mov si, hardwareerr
+    call print
 hang:
     jmp hang
 
@@ -22,7 +66,6 @@ hang:
 print:
     cld ; reset direction flag to go forward
     mov ah, 0x0E ; Teletype output
-    mov si, debug
 .loop:
     lodsb ; load next byte
     cmp al, 0
