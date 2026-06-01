@@ -178,7 +178,7 @@ greater/equal
 less/equal
 ```
 
-unconditional jump is jmp
+unconditional jump is jmp. One use case of this command is to jmp to an absolute address and hand over control to another program
 
 - loops
 
@@ -454,3 +454,11 @@ section .text     ; code goes here
 section .data     ; initialized data goes here
 section .bss      ; uninitialized data goes here
 ```
+
+## Assembly time versus Run time
+
+Directives are for the assembler and commands like jmp and mov are CPU instructions so they occur during run time.
+
+Examples of directives include align, [BITS xx], [ORG ...], equ, struc/endstruc, istruc/iend, times.
+
+A tip that is in my opinion helpful in differentiating between directives and explicit CPU actions is to look for a command that directly modifies and interracts with CPU registers or CPU interactions
