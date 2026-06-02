@@ -1,7 +1,7 @@
 [BITS 16] ; produce 16 bit code since we are on 16bit real mode right now
 [ORG 0x7c00] ; address in which BIOS loads bootloader. tells assembler that code will be loaded at the given address
 
-KERNEL_LOADER_SECTORS equ 10 ; subject to change
+KERNEL_LOADER_SECTORS equ 1 ; subject to change
 
 struc DiskAddressPacket
     .size resb 1 ; size of packet
@@ -25,27 +25,26 @@ start:
     mov bx, 0x55AA
     mov dl, 0x80
     int 0x13 ; call BIOS disk services to check whether extended read and write services are supported
+
+    jc error ; jump if carry flag is set
     test cx, 0x0001
     jz error ; bit zero of cx is not set.
-    jc error ; jump if carry flag is set
     cmp bx, 0xAA55
     jne error
 
-    mov si, debug
-    call print
-
-    mov ax, 0x00
-    mov ds, ax ; ensure that ds is pointing to segment 0
     mov si, packet
     mov ah, 0x42
     mov dl, 0x80 ; the C drive
     int 0x13
+    mov bl, ah
 
     ; check whether operation was successful
     jc error
     cmp ah, 0x00
     jne error
     
+    push 0x7e00 ; push address of stage 2 to top of stack
+    ret ; pop it from top of the stack and jump to it
     jmp hang
 
 error:
@@ -67,6 +66,7 @@ print:
 
 .done:
     ret
+
 
 debug : db 'debug', 0
 hardwareerr : db 'incompatible-hardware-error', 0

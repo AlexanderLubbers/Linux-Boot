@@ -23,3 +23,5 @@ print:
 
 
 bootmsg : db 'successfully-booted', 0
+
+times 512 - ($ - $$) db 0
