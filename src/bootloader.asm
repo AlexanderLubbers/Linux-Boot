@@ -19,6 +19,8 @@ start:
     mov es, ax ; extra segment
     mov ss, ax ; stack segment
     mov sp, 0x7c00 ; stack starts below bootloader and grows to lower addresses
+
+    mov [boot_drive], dl
     sti ; interupts enabled after the next instruction
     ; read stage 2 from disk
     mov ah, 0x41
@@ -47,7 +49,7 @@ load_kernel_loader:
 stage_two:
     mov si, packet
     mov ah, 0x42
-    mov dl, 0x80 ; the C drive
+    mov dl, [boot_drive]
     int 0x13
     ret
 
@@ -89,6 +91,7 @@ print:
 
 debug : db 'debug', 0
 hardwareerr : db 'incompatible-hardware-error', 0
+boot_drive: db 0
 
 align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary. happens during assembly time
 packet: istruc DiskAddressPacket
