@@ -32,21 +32,40 @@ start:
     cmp bx, 0xAA55
     jne error
 
+    call stage_two
+
+    ; check whether operation was successful
+    jc reload
+    cmp ah, 0x00
+    jne reload
+    
+load_kernel_loader:
+    push 0x7e00 ; push address of stage 2 to top of stack
+    ret ; pop it from top of the stack and jump to it
+
+
+stage_two:
     mov si, packet
     mov ah, 0x42
     mov dl, 0x80 ; the C drive
     int 0x13
-    mov bl, ah
+    ret
+
+reload:
+    mov cx, 3
+.retry:
+    mov ah, 0x00
+    int 0x13 ; reset the disk services
+    call stage_two
 
     ; check whether operation was successful
-    jc error
+    jc .failed
     cmp ah, 0x00
-    jne error
-    
-    push 0x7e00 ; push address of stage 2 to top of stack
-    ret ; pop it from top of the stack and jump to it
-    jmp hang
+    jne .failed
+    jmp load_kernel_loader
 
+.failed:
+    loop .retry
 error:
     mov si, hardwareerr
     call print

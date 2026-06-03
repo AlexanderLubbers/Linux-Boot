@@ -16,10 +16,6 @@ It has to bring the kernel into memory as well as provide it with everything it 
 ### Target Architecture
 My bootloader will target x86_64 architecture because it has broad compatibility with modern operating systems including Linux which uses x86_64 extensively.
 
-### Target Firmware Interface
-
-BIOS is generally not the best. It cannot support all devices and does not even have support for sound, network cards, GPUS, and input devices (like mice). It only has a fraction of the features UEFI does. Because of this, the firmware I am going to target is UEFI.
-
 ### Environment
 Since most linux operating systems use Long Mode (>99%), excluding embedded systems that require extreme resource efficiency, it makes the most sense to have this bootloader support Long Mode.
 
@@ -85,9 +81,6 @@ needs to be verified
 
 To summarize what memory maps are and why they are important
 
-### TODO
-Stage 1:
-* set up segment registers (cs, ds, es, ss) so CPU knows where everything is (code, data, stack)
-* set up stack -> done
-* figure out how to load second boot loader stage
-* enable A20
+### Debugging Tips
+* debug assumptions too not just code
+* prove everything when debugging
