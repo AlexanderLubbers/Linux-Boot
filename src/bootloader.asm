@@ -1,7 +1,11 @@
 [BITS 16] ; produce 16 bit code since we are on 16bit real mode right now
 [ORG 0x7c00] ; address in which BIOS loads bootloader. tells assembler that code will be loaded at the given address
 
-KERNEL_LOADER_SECTORS equ 1 ; subject to change
+%ifdef SECTORS
+    KERNEL_LOADER_SECTORS equ SECTORS
+%else
+    KERNEL_LOADER_SECTORS equ 1
+%endif
 
 struc DiskAddressPacket
     .size resb 1 ; size of packet
