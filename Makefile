@@ -15,3 +15,7 @@ all:
 
 clean:
 	rm -f ./bin/*
+
+setup:
+	if ([ ! -d "bin" ]); then mkdir bin; fi
+	echo "setup complete"
