@@ -69,17 +69,8 @@ logical, and variable sized chunk of memory that is used to organize data. rathe
 ### ROM vs RAM
 RAM is random access memory. It is fast, temporary, volatile, and is used by the CPU to hold relavent data. ROM is read only memory, and it is slow and permanent. It retains its memory without power, and is used to store important firmware like startup instructions.
 
-### Memory Map
-needs to be verified
-
-0x00000 - 0x003FF   Interrupt Vector Table (BIOS uses this)
-0x00400 - 0x004FF   BIOS Data Area
-0x00500 - 0x07BFF   Free memory (stack grows down into here)
-0x07C00 - 0x07DFF   Your bootloader (512 bytes)
-0x07E00 - 0x9FFFF   Free memory (second stage, kernel, etc)
-0xA0000 - 0xFFFFF   BIOS, video memory, ROM (don't touch this)
-
-To summarize what memory maps are and why they are important
+### A20 Gate
+In short, it allows for memory access that is above 1mb. Some processors are equiped with the A20 gate to ensure backward comapitibiltiy with software that relied on address wrap arounds. The A20 gate must be enabled to ensure that address wrap arounds do not occur and is needed for accessing higher memory and protected mode.
 
 ### Debugging Tips
 * debug assumptions too not just code

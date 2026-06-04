@@ -26,15 +26,21 @@ start:
 
     mov [boot_drive], dl
     sti ; interupts enabled after the next instruction
-    ; read stage 2 from disk
+
+    call get_a20
+    cmp ax, 1
+    jne enable_a20
+continue:
+
+    ; check whether extended read and write services are supported
     mov ah, 0x41
     mov bx, 0x55AA
     mov dl, 0x80
-    int 0x13 ; call BIOS disk services to check whether extended read and write services are supported
+    int 0x13
 
-    jc error ; jump if carry flag is set
+    jc error
     test cx, 0x0001
-    jz error ; bit zero of cx is not set.
+    jz error
     cmp bx, 0xAA55
     jne error
 
@@ -49,7 +55,76 @@ load_kernel_loader:
     push 0x7e00 ; push address of stage 2 to top of stack
     ret ; pop it from top of the stack and jump to it
 
+; get whether the A20 line is enabled or not
+; ax register is one if A20 line is enabled
+get_a20:
+    ; preserve current state of program
+    pushf
+    push si
+    push di
+    push ds
+    push es
+    cli
 
+    ; apply physical address = 16 * segment + offset to get the following
+    ; ds:si = 0x0000:0x0500 = (0x00000500)
+    mov ax, 0x0000
+    mov ds, ax ; ds = 0x0000
+    mov si, 0x0500
+
+    ; es:di = 0xFFFF:0x0510 = (0x00100500)
+    not ax ; ax = 0xFFFF
+    mov es, ax ; es = 0xFFFF
+    mov di, 0x0510
+
+    ; save old memory adddresses
+    mov al, [ds:si]
+    mov [.buffer_below_mb], al
+    mov al, [es:di]
+    mov [.buffer_over_mb], al
+
+    mov ah, 1
+    mov byte [ds:si], 0
+    mov byte [es:di], 1
+    mov al, [ds:si]
+    cmp al, [es:di]
+    jne .exit
+    dec ah
+.exit:
+    mov al, [.buffer_below_mb]
+    mov [ds:si], al
+    mov al, [.buffer_over_mb]
+    mov [es:di], al
+    shr ax, 8 ; shift right 8. move ah to al and clear ah
+    pop es
+    pop ds
+    pop di
+    pop si
+    popf ; also renables interrupts since interrupts being active or not are dicated by flags
+    ret
+
+.buffer_below_mb: db 0
+.buffer_over_mb: db 0
+
+; enables A20 lines
+; stops bootloader and prints out incompatible hardware error if int 0x15 is not supported
+; most BIOSes should support int 0x15 (1990s onward)
+enable_a20:
+    mov ax, 0x2403 ; query A20 gate support
+    int 0x15
+    jc hardwareerr
+    test ah, ah
+    jnc hardwareerr
+
+    mov ax, 0x2401 ; enable A20 gate
+    int 0x15
+    jc hardwareerr
+    test ah, ah
+    jnc hardwareerr
+    jmp continue
+
+
+; loads stage 2 into mememory
 stage_two:
     mov si, packet
     mov ah, 0x42
@@ -57,6 +132,7 @@ stage_two:
     int 0x13
     ret
 
+; attempt to reload stage 2 of the bootloader from memory 3 times
 reload:
     mov cx, 3
 .retry:
@@ -105,6 +181,8 @@ packet: istruc DiskAddressPacket
     at DiskAddressPacket.buffer, dd 0x7E00
     at DiskAddressPacket.address, dq 1
 iend
+
+
 ; times = repeating following instruction n times
 ; $ = current addess
 ; $$ = start address
