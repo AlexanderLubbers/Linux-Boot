@@ -98,6 +98,8 @@ push (put on top of stack)
 
 pop (remove top of stack)
 
+`pop es` means put value on the top of the stack into es. `push es` means push the value in es to the top of the stack  
+
 stack pointer points to top of stack `rsp`
 
 `rbp` = base pointer and points to the base of the current function's stack frame

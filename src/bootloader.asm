@@ -27,6 +27,20 @@ start:
     mov [boot_drive], dl
     sti ; interupts enabled after the next instruction
 
+    ; clear screen
+    mov ah, 0x06 ; requests the scroll up function
+    mov al, 0x00 ; instrcut BIOS to clear window
+    mov bh, 0x02 ; specify white text on black
+    mov cx, 0x0000 ; top coordinates (0,0)
+    mov dx, 0x184f ; bottom coordinates (furthest down and furthest right)
+    int 0x10
+
+    ; reset cursor pos to beginning
+    mov ah, 0x02
+    mov bh, 0x00
+    mov dx, 0x0000 ; coordinates (0,0)
+    int 0x10
+
     call get_a20
     cmp ax, 1
     jne enable_a20
@@ -34,14 +48,14 @@ continue:
 
     ; check whether extended read and write services are supported
     mov ah, 0x41
-    mov bx, 0x55AA
+    mov bx, 0x55aa
     mov dl, 0x80
     int 0x13
 
     jc error
     test cx, 0x0001
     jz error
-    cmp bx, 0xAA55
+    cmp bx, 0xaa55
     jne error
 
     call stage_two
@@ -112,15 +126,15 @@ get_a20:
 enable_a20:
     mov ax, 0x2403 ; query A20 gate support
     int 0x15
-    jc hardwareerr
+    jc error
     test ah, ah
-    jnc hardwareerr
+    jnc error
 
     mov ax, 0x2401 ; enable A20 gate
     int 0x15
-    jc hardwareerr
+    jc error
     test ah, ah
-    jnc hardwareerr
+    jnc error
     jmp continue
 
 
@@ -149,7 +163,7 @@ reload:
 .failed:
     loop .retry
 error:
-    mov si, hardwareerr
+    mov si, hardware_error
     call print
 hang:
     jmp hang
@@ -157,7 +171,7 @@ hang:
 
 print:
     cld ; reset direction flag to go forward
-    mov ah, 0x0E ; Teletype output
+    mov ah, 0x0e ; Teletype output
 .loop:
     lodsb ; load next byte
     cmp al, 0
@@ -170,7 +184,7 @@ print:
 
 
 debug : db 'debug', 0
-hardwareerr : db 'incompatible-hardware-error', 0
+hardware_error : db 'incompatible-hardware-error', 0
 boot_drive: db 0
 
 align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary. happens during assembly time
@@ -178,7 +192,7 @@ packet: istruc DiskAddressPacket
     at DiskAddressPacket.size, db 0x10
     at DiskAddressPacket.reserved, db 0
     at DiskAddressPacket.sectors, dw KERNEL_LOADER_SECTORS
-    at DiskAddressPacket.buffer, dd 0x7E00
+    at DiskAddressPacket.buffer, dd 0x7e00
     at DiskAddressPacket.address, dq 1
 iend
 
@@ -189,4 +203,4 @@ iend
 ; 510 - (current - start) = remaining space left to fill
 times 510 - ($ - $$) db 0 ; pad until you reach a total of 510 bytes
 
-dw 0xAA55 ; boot signature
+dw 0xaa55 ; boot signature
