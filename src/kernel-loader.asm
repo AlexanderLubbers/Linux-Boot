@@ -5,7 +5,6 @@ entry_number equ 0x8000 ; number of entries will be stored at this address
 entry_start equ 0x8004 ; entries start at this address
 start:
     cld
-    mov si, debug
     ; detecting memory map
     call get_memory_map
 
@@ -17,7 +16,8 @@ start:
 
 hang:
     jmp hang
-
+; debug edx register has wrong value at the end of memory map reading process
+; verify debug symbols in binary
 get_memory_map:
     mov di, entry_start
     ; mov [es:di], dword entry_start
@@ -33,6 +33,8 @@ get_memory_map:
     je .failed ; we reached the end after one read, memory map is invalid
     mov edx, 0x0534d4150 ; possibly un-needed
     cmp cl, 20
+    jb .failed
+    cmp cl, 20
     je .attribute ; uint32_t attribute bitfield not included in BIOS
 .first_continue:
     call .increment
@@ -42,7 +44,7 @@ get_memory_map:
     call print
     jmp hang
 .attribute: ; force a valid APCI entry
-    mov [es:di + 20], dword 1
+    mov [di + 20], dword 1
     jmp .first_continue
 .increment:
     add di, 24
@@ -50,7 +52,7 @@ get_memory_map:
     ret
 .read:
     mov eax, 0xe820
-    mov edx, 0x0534d4150         
+    mov edx, 0x0534d4150     
     mov ecx, 0x18
     int 0x15
     jc .done ; carry flag will be set after accessing last valid entry
@@ -66,7 +68,7 @@ get_memory_map:
     jne .failed
     jmp .read
 .read_attribute:
-    mov [es:di + 20], dword 1
+    mov [di + 20], dword 1
     jmp .continue
 .done:
     ret
