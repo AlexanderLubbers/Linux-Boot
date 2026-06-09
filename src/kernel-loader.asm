@@ -8,16 +8,12 @@ start:
     ; detecting memory map
     call get_memory_map
 
-    mov eax, [entry_number]
-    call print_hex_32
-
     mov si, end_msg
     call print
 
 hang:
     jmp hang
-; debug edx register has wrong value at the end of memory map reading process
-; verify debug symbols in binary
+
 get_memory_map:
     mov di, entry_start
     ; mov [es:di], dword entry_start
@@ -86,43 +82,7 @@ print:
 .done:
     ret
 
-print_hex_32:
-    mov cx, 8 ; We need to process 8 nibbles (32 bits / 4)
-    mov bx, hex_buffer ; Pointer to where the string will be stored
-
-.loop:
-    rol eax, 4 ; Rotate left by 4 bits to get the current nibble
-    mov dl, al 
-    and dl, 0x0F ; bit mask to get only the nibble
-    
-    ; Convert to ASCII character
-    cmp dl, 0x09
-    jbe .add_zero
-    add dl, 7
-.add_zero:
-    add dl, '0' ; Add ASCII base for 0
-
-    mov [bx], dl ; Save character to buffer
-    inc bx ; Move buffer pointer forward
-    dec cx ; Decrement loop counter
-    jnz .loop
-
-    ; Print the string using BIOS INT 0x10
-    mov ah, 0x0E
-    mov si, hex_buffer
-.print_char:
-    lodsb
-    or al, al
-    jz .done
-    int 0x10
-    jmp .print_char
-
-.done:
-    ret
-
 
 memory_err : db 'Error Reading Memory Map', 13, 10, 0
 boot_msg : db 'please select an operating system', 13, 10, 0 ; 13 = carriage return (move cursor to beginning of current line)
 end_msg : db 'end', 13, 10, 0 ; 10 = line feed (move cursor down one line)
-debug: db 'debug', 13, 10, 0
-hex_buffer: db '00000000', 13, 10, 0
