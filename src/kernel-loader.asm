@@ -1,8 +1,13 @@
 [BITS 16]
-[ORG 0x7E00]
+[ORG 0x7e00]
 
-entry_number equ 0x8000 ; number of entries will be stored at this address
-entry_start equ 0x8004 ; entries start at this address
+; number of entries will be stored at this address
+entry_number_offset equ 0x0500
+entry_number_segment equ 0x0000
+ ; entries start at this address
+entry_start_offset equ 0x0504
+entry_start_segment equ 0x0000
+
 start:
     cld
     ; detecting memory map
@@ -15,8 +20,9 @@ hang:
     jmp hang
 
 get_memory_map:
-    mov di, entry_start
-    ; mov [es:di], dword entry_start
+    mov ax, entry_start_segment
+    mov es, ax
+    mov di, entry_start_offset
     xor ebx, ebx ; clear ebx
     mov edx, 0x0534d4150 ; magic number
     mov eax, 0xe820
@@ -44,7 +50,7 @@ get_memory_map:
     jmp .first_continue
 .increment:
     add di, 24
-    add [entry_number], dword 1
+    add [es:entry_number_offset], dword 1
     ret
 .read:
     mov eax, 0xe820

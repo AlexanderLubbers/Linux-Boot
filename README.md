@@ -8,9 +8,12 @@ Pontifex (latin for bridge builder) is a custom bootloader that leverages BIOS f
 make setup
 make all
 ```
+## Disk format
+LBA 0: boot.bin
+
+LBA 1+: loader.bin
 
 ## Memory Map Format
-Number of entries will be stored at memory address 0x8000 and the entries will be stored starting at 0x8004
 
 Entry format:
 

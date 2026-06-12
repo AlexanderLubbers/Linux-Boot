@@ -75,3 +75,17 @@ In short, it allows for memory access that is above 1mb. Some processors are equ
 ### Debugging Tips
 * debug assumptions too not just code
 * prove everything when debugging
+
+### Memory map
+```
+0x00000 - 0x003FF   Interrupt Vector Table (IVT) — 1KB, 256 vectors × 4 bytes
+0x00400 - 0x004FF   BIOS Data Area (BDA) — don't touch this
+0x00500 - 0x07BFF   Free conventional memory — safe to use
+0x07C00 - 0x07DFF   Your bootloader (loaded here by BIOS)
+0x07E00 - 0x7FFFF   Free conventional memory — safe to use
+0x80000 - 0x9FFFF   Extended BIOS Data Area (EBDA) — avoid, size varies
+0xA0000 - 0xBFFFF   Video memory (VGA buffers etc.)
+0xC0000 - 0xFFFFF   ROM/BIOS — completely off limits
+```
+
+the first free conventional memory block has 30,000+ free bytes, so all of the boot info will be stored there

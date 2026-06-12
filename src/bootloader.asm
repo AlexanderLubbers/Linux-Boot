@@ -11,7 +11,7 @@ struc DiskAddressPacket
     .size resb 1 ; size of packet
     .reserved resb 1 ; should always be zero
     .sectors resw 1 ; number of sectors to transfer. The max is usually 127
-    .buffer resd 1 ; transfer buffer
+    .buffer resd 1 ; transfer buffer (where to load in RAM)
     .address resq 1 ; LBA address of sector to read from disk
 endstruc
 
@@ -44,8 +44,8 @@ start:
     call get_a20
     cmp ax, 1
     jne enable_a20
-continue:
 
+continue:
     ; check whether extended read and write services are supported
     mov ah, 0x41
     mov bx, 0x55aa
