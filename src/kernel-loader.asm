@@ -8,10 +8,31 @@ entry_number_segment equ 0x0000
 entry_start_offset equ 0x0504
 entry_start_segment equ 0x0000
 
+struc VesaInfoBlock				;	VesaInfoBlock_size = 512 bytes
+	.Signature		resb 4		;	must be 'VESA'
+	.Version		resw 1
+	.OEMNamePtr		resd 1
+	.Capabilities		resd 1
+
+	.VideoModesOffset	resw 1
+	.VideoModesSegment	resw 1
+
+	.CountOf64KBlocks	resw 1
+	.OEMSoftwareRevision	resw 1
+	.OEMVendorNamePtr	resd 1
+	.OEMProductNamePtr	resd 1
+	.OEMProductRevisionPtr	resd 1
+	.Reserved		resb 222
+	.OEMData		resb 256 ; vendor specific data
+endstruc
+
 start:
     cld
     ; detecting memory map
     call get_memory_map
+    ; detect video modes
+    mov [video_mode_location], di
+    call get_vesa
 
     mov si, end_msg
     call print
@@ -75,6 +96,24 @@ get_memory_map:
 .done:
     ret
 
+; get array of all supported video modes
+get_vesa:
+    mov ax, 0x00
+    mov es, ax
+    mov dword [di], "VBE2"
+    clc ; some BIOS functions require that the carry flag is not set before calling it
+    mov ax, 0x4f00
+    int 0x10
+    jc .failed
+    cmp ax, 0x004f
+    jne .failed
+    add di, 0x200
+    ret
+.failed:
+    mov si, video_err
+    call print
+    jmp hang
+
 print:
     cld ; reset direction flag to go forward
     mov ah, 0x0E ; Teletype output
@@ -88,7 +127,9 @@ print:
 .done:
     ret
 
+video_mode_location: dw 1    
 
-memory_err : db 'Error Reading Memory Map', 13, 10, 0
-boot_msg : db 'please select an operating system', 13, 10, 0 ; 13 = carriage return (move cursor to beginning of current line)
-end_msg : db 'end', 13, 10, 0 ; 10 = line feed (move cursor down one line)
+memory_err : db "Error Reading Memory Map", 13, 10, 0
+boot_msg : db "Please select an operating system", 13, 10, 0 ; 13 = carriage return (move cursor to beginning of current line)
+end_msg : db "end", 13, 10, 0 ; 10 = line feed (move cursor down one line)
+video_err : db "Error while detecting video modes", 13, 10, 0
