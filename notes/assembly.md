@@ -350,6 +350,8 @@ mov rcx, [rbx + MemoryMapEntry.length]  ; read the length field
 mov edx, [rbx + MemoryMapEntry.type]    ; read the type field
 ```
 
+It is done this way because after the struc is parsed, items like MemoryMapEntry.base get turned into an offset from the beginning
+
 ## How to calculate physical address
 physical address = 16 * segment + offset
 

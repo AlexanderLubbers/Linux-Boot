@@ -89,3 +89,9 @@ In short, it allows for memory access that is above 1mb. Some processors are equ
 ```
 
 the first free conventional memory block has 30,000+ free bytes, so all of the boot info will be stored there
+
+### 32bit and 64bit registers in real mode
+32 bit registers require operand size overide prefixes because 16bit operation size is the default in 16bit real mode
+
+### Frame buffer
+Essentially, it is a portion of RAM where pixel data is stored. each part of this portion of RAM corresponds to a pixel. This is used to display things to the screen. A linear frame buffer means the entire frame buffer can be accessed as a contiguous array of bytes
