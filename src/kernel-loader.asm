@@ -8,22 +8,46 @@ entry_number_segment equ 0x0000
 entry_start_offset equ 0x0504
 entry_start_segment equ 0x0000
 
-struc VesaInfoBlock				;	VesaInfoBlock_size = 512 bytes
-	.Signature		resb 4		;	must be 'VESA'
-	.Version		resw 1
-	.OEMNamePtr		resd 1
-	.Capabilities		resd 1
+kernel_address equ 0x100000
 
-	.VideoModesOffset	resw 1
-	.VideoModesSegment	resw 1
 
-	.CountOf64KBlocks	resw 1
-	.OEMSoftwareRevision	resw 1
-	.OEMVendorNamePtr	resd 1
-	.OEMProductNamePtr	resd 1
-	.OEMProductRevisionPtr	resd 1
-	.Reserved		resb 222
-	.OEMData		resb 256 ; vendor specific data
+struc VesaModeInfoBlock
+	.ModeAttributes		resw 1
+	.FirstWindowAttributes	resb 1
+	.SecondWindowAttributes	resb 1
+	.WindowGranularity	resw 1
+	.WindowSize		resw 1
+	.FirstWindowSegment	resw 1
+	.SecondWindowSegment	resw 1
+	.WindowFunctionPtr	resd 1
+	.BytesPerScanLine	resw 1
+
+	.Width			resw 1
+	.Height			resw 1
+	.CharWidth		resb 1
+	.CharHeight		resb 1
+	.PlanesCount		resb 1
+	.BitsPerPixel		resb 1
+	.BanksCount		resb 1
+	.MemoryModel		resb 1
+	.BankSize		resb 1
+	.ImagePagesCount	resb 1
+	.Reserved1		resb 1
+
+	.RedMaskSize		resb 1
+	.RedFieldPosition	resb 1
+	.GreenMaskSize		resb 1
+	.GreenFieldPosition	resb 1
+	.BlueMaskSize		resb 1
+	.BlueFieldPosition	resb 1
+	.ReservedMaskSize	resb 1
+	.ReservedMaskPosition	resb 1
+	.DirectColorModeInfo	resb 1
+
+	.LFBAddress		resd 1
+	.OffscreenMemoryOffset	resd 1
+	.OffscreenMemorySize	resw 1
+	.Reserved2		resb 206
 endstruc
 
 start:
@@ -34,8 +58,19 @@ start:
     mov [video_mode_location], di
     call get_vesa
 
-    mov si, end_msg
-    call print
+    mov [frame_buffer_location], di
+    call find_best_mode
+    
+    call frame_buffer
+
+    push es
+    push di
+    call switch_video_mode
+    pop di
+    pop es
+
+    ; mov si, end_msg
+    ; call print
 
 hang:
     jmp hang
@@ -114,6 +149,105 @@ get_vesa:
     call print
     jmp hang
 
+; finds the best video mode
+; the best video mode is defined as the video mode with the highest
+; resolution and the highest color depth (prefer 32 bits per pixel).
+; must also support linear frame buffer and must be a graphics mode (not text mode)
+find_best_mode:
+    mov ax, [video_mode_location + 14] ; offset 14 to get video modes offset in the vesa info block
+    mov di, ax
+    mov ax, [video_mode_location + 16] ; video modes segment located at offset 16 in vesa info block
+    mov es, ax
+
+    ; zero out variables
+    mov word [best_video_mode], 0x00
+    mov dword [best_resolution], 0x00
+    mov dword [best_color_depth], 0x00
+.loop:
+    mov cx, [es:di]
+    cmp cx, 0xffff
+    je .done
+    push es ; save the value of es by putting it on the stack
+    push di ; save the value of di by putting it on the stack
+    mov ax, 0
+    mov es, ax
+    mov di, VesaModeInfoBlockBuffer ; point es:di to buffer
+    clc
+    ; get video mode info
+    mov ax, 0x4f01
+    int 0x10
+    cmp ax, 0x004f
+    jne .failed
+    
+    pop di
+    pop es
+    add di, 4 ; point es:di to next item in mode list
+    
+    mov dx, [VesaModeInfoBlockBuffer + VesaModeInfoBlock.ModeAttributes]
+    test dx, 0b00010000
+    jz .loop ; video mode is not a graphics mode
+    test dx, 0b10000000
+    jz .loop ; video mode does not have a linear frame buffer
+    ; calculate resolution
+    xor edx, edx
+    mov edx, [VesaModeInfoBlockBuffer + VesaModeInfoBlock.Width]
+    mov eax, [VesaModeInfoBlockBuffer+ VesaModeInfoBlock.Height]
+    mul edx
+
+    ; determine whether this video mode is better than the current best video mode
+    cmp edx, [best_resolution]
+    ja .set_best
+    je .tie_break
+    jmp .loop
+.failed:
+    mov si, video_detail_err
+    call print
+    jmp hang
+.set_best:
+    mov [best_video_mode], cx
+    mov [best_resolution], edx
+    mov edx, [VesaModeInfoBlockBuffer + VesaModeInfoBlock.BitsPerPixel]
+    mov [best_color_depth], edx
+    jmp .loop
+.tie_break:
+    mov edx, [VesaModeInfoBlockBuffer + VesaModeInfoBlock.BitsPerPixel]
+    cmp edx, [best_color_depth]
+    ja .set_best
+    jmp .loop
+.done:
+    ret
+
+; places info of chosen video mode into memory
+frame_buffer:
+    mov ax, 0
+    mov es, ax
+    mov di, [frame_buffer_location]
+    mov cx, [best_video_mode]
+    mov ax, 0x4f01
+    int 0x10
+    ret
+.failed:
+    mov si, video_err
+    call print
+    jmp hang
+
+
+; sets the video mode to the chosen best video mode
+switch_video_mode:
+    mov ax, 0
+    mov es, ax
+    mov di, [frame_buffer_location]
+    mov ax, 0x4f02
+    mov bx, [best_video_mode]
+    or bx, 0x4000
+    int 0x10
+    jc .failed
+    ret
+.failed:
+    mov si, video_switch_err
+    call print
+    jmp hang
+
 print:
     cld ; reset direction flag to go forward
     mov ah, 0x0E ; Teletype output
@@ -128,8 +262,19 @@ print:
     ret
 
 video_mode_location: dw 1    
+frame_buffer_location: dw 1
+best_video_mode: dw 1
+best_resolution: dd 1
+best_color_depth: dd 1
+
+align 4
+VesaModeInfoBlockBuffer:	istruc VesaModeInfoBlock
+	times VesaModeInfoBlock_size db 0
+iend
 
 memory_err : db "Error Reading Memory Map", 13, 10, 0
 boot_msg : db "Please select an operating system", 13, 10, 0 ; 13 = carriage return (move cursor to beginning of current line)
 end_msg : db "end", 13, 10, 0 ; 10 = line feed (move cursor down one line)
 video_err : db "Error while detecting video modes", 13, 10, 0
+video_detail_err : db "Unable to retrieve video mode info", 13, 10, 0 ; error reading video mode info, or video mode list is empty
+video_switch_err : db "Failed to switch to graphical video mode", 13, 10, 0
