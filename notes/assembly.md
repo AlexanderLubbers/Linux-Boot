@@ -466,3 +466,14 @@ Directives are for the assembler and commands like jmp and mov are CPU instructi
 Examples of directives include align, [BITS xx], [ORG ...], equ, struc/endstruc, istruc/iend, times.
 
 A tip that is in my opinion helpful in differentiating between directives and explicit CPU actions is to look for a command that directly modifies and interracts with CPU registers or CPU interactions
+
+## Sections
+
+```
+section .text ; contains executable instructions
+section .data ; contains initialized and writeable data
+section .rodata ; read only data
+section .bss ; uninitialized data
+```
+
+There are many other types of sections but those are typically generated automatically by the assembler
