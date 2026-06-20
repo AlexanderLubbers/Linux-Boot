@@ -1,5 +1,10 @@
 [BITS 16]
-[ORG 0x7e00]
+
+%ifdef DEBUG
+%else
+    [ORG 0x7e00]
+%endif
+
 
 ; number of entries will be stored at this address
 entry_number_offset equ 0x0500
@@ -50,7 +55,11 @@ struc VesaModeInfoBlock
 	.Reserved2		resb 206
 endstruc
 
-start:
+section .text
+
+global _start
+
+_start:
     cld
     ; detecting memory map
     call get_memory_map
@@ -58,19 +67,20 @@ start:
     mov [video_mode_location], di
     call get_vesa
 
-    mov [frame_buffer_location], di
-    call find_best_mode
+    mov si, end_msg
+    call print
     
-    call frame_buffer
 
-    push es
-    push di
-    call switch_video_mode
-    pop di
-    pop es
+    ; mov [frame_buffer_location], di
+    ; call find_best_mode
 
-    ; mov si, end_msg
-    ; call print
+    ; call frame_buffer
+
+    ; push es
+    ; push di
+    ; call switch_video_mode
+    ; pop di
+    ; pop es
 
 hang:
     jmp hang
@@ -88,8 +98,8 @@ get_memory_map:
     cmp eax, 0x0534d4150
     jne .failed ; eax register corrupted, memory map is invalid
     cmp ebx, 0
-    je .failed ; we reached the end after one read, memory map is invalid
-    mov edx, 0x0534d4150 ; possibly un-needed
+    je .complete ; ebx means the last entry has been reached
+    mov edx, 0x0534d4150
     cmp cl, 20
     jb .failed
     cmp cl, 20
@@ -113,9 +123,9 @@ get_memory_map:
     mov edx, 0x0534d4150     
     mov ecx, 0x18
     int 0x15
-    jc .done ; carry flag will be set after accessing last valid entry
+    jc .done ; carry flag means the end of the list has already been reached 
     cmp ebx, 0
-    je .done
+    je .complete
     cmp cl, 20
     jb .failed
     cmp cl, 20
@@ -128,6 +138,18 @@ get_memory_map:
 .read_attribute:
     mov [di + 20], dword 1
     jmp .continue
+.complete:
+    cmp cl, 20
+    jb .failed
+    cmp eax, 0x0534d4150
+    jne .failed
+    cmp cl, 20
+    je .write_last_attribute
+    call .increment
+    jmp .done
+.write_last_attribute
+    mov [di + 20], dword 1
+    call .increment
 .done:
     ret
 
@@ -261,6 +283,8 @@ print:
 .done:
     ret
 
+section .data
+
 video_mode_location: dw 1    
 frame_buffer_location: dw 1
 best_video_mode: dw 1
@@ -271,6 +295,8 @@ align 4
 VesaModeInfoBlockBuffer:	istruc VesaModeInfoBlock
 	times VesaModeInfoBlock_size db 0
 iend
+
+section .rodata
 
 memory_err : db "Error Reading Memory Map", 13, 10, 0
 boot_msg : db "Please select an operating system", 13, 10, 0 ; 13 = carriage return (move cursor to beginning of current line)

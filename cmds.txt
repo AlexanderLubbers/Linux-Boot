@@ -1,3 +1,7 @@
 qemu-system-x86_64 -hda ./bin/bootloader.bin -s -S
 
 qemu-system-x86_64 -hda ./bin/bootloader.bin
+
+qemu-system-x86_64 -hda -vga std ./bin/bootloader.bin -s -S
+
+qemu-system-x86_64 -hda -vga std ./bin/bootloader.bin
