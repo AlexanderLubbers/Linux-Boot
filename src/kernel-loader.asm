@@ -89,14 +89,10 @@ _start:
 
     call frame_buffer
 
-    ; mov si, end_msg
-    ; call print
+    call switch_video_mode
 
-    ; push es
-    ; push di
-    ; call switch_video_mode
-    ; pop di
-    ; pop es
+    mov si, end_msg
+    call print
 
 hang:
     jmp hang
