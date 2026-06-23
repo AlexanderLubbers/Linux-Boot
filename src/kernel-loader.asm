@@ -87,12 +87,10 @@ _start:
     mov word [frame_buffer_location], di
     call find_best_mode
 
-    mov dx, word [best_video_mode]
+    call frame_buffer
 
     ; mov si, end_msg
     ; call print
-
-    ; call frame_buffer
 
     ; push es
     ; push di
@@ -226,12 +224,13 @@ find_best_mode:
     jz .next ; video mode does not have a linear frame buffer
     ; calculate resolution
     xor edx, edx
-    mov edx, dword [VesaModeInfoBlockBuffer + VesaModeInfoBlock.Width]
-    mov eax, dword [VesaModeInfoBlockBuffer + VesaModeInfoBlock.Height]
+    xor eax, eax
+    movzx edx, word [VesaModeInfoBlockBuffer + VesaModeInfoBlock.Width]
+    movzx eax, word [VesaModeInfoBlockBuffer + VesaModeInfoBlock.Height]
     mul edx
 
     ; determine whether this video mode is better than the current best video mode
-    cmp edx, dword [best_resolution]
+    cmp eax, dword [best_resolution]
     ja .set_best
     je .tie_break
 .next:
@@ -250,7 +249,7 @@ find_best_mode:
     jmp hang
 .set_best:
     mov word [best_video_mode], cx
-    mov dword [best_resolution], edx
+    mov dword [best_resolution], eax
     mov edx, [VesaModeInfoBlockBuffer + VesaModeInfoBlock.BitsPerPixel]
     mov dword [best_color_depth], edx
     jmp .next

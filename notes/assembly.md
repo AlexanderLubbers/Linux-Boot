@@ -408,6 +408,7 @@ SHL - logical shift operand left count bits (same as SAL)
 SHR - logical shift operand right count bits (does not maintain sign bit)
 
 MOV - move register to register, move register to memory, move memory to register
+MOVZX - move smaller item into a larger register
 XCHG - exchange register/memory with register
 CBW - convert byte to word
 CDQ - convert word to double word/convert double word to quad word
