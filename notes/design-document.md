@@ -95,3 +95,8 @@ the first free conventional memory block has 30,000+ free bytes, so all of the b
 
 ### Frame buffer
 Essentially, it is a portion of RAM where pixel data is stored. each part of this portion of RAM corresponds to a pixel. This is used to display things to the screen. A linear frame buffer means the entire frame buffer can be accessed as a contiguous array of bytes
+
+### NMI
+stands for non maskable interrupt and unlike normal hardware interrupts, these do not get disabled using `cli`
+
+NMI is used to severe events like memory parity errors and hardware failures. NMI can interrupt code

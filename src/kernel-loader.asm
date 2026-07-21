@@ -91,6 +91,10 @@ _start:
 
     call switch_video_mode
 
+    ; switch to protected mode
+
+    ; switchs to long mode
+
     mov si, end_msg
     call print
 
@@ -287,6 +291,18 @@ switch_video_mode:
     mov si, video_switch_err
     call print
     jmp hang
+
+disable_nmi:
+    mov al, 0x0f | 0x80
+    out 0x70, al
+    in al, 0x71
+    ret
+
+enable_nmi:
+    mov al, 0x0f
+    out 0x70, al
+    in al, 0x71
+    ret
 
 print:
     cld ; reset direction flag to go forward
