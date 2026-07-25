@@ -15,7 +15,7 @@ clean:
 
 setup:
 	if ([ ! -d "bin" ]); then mkdir bin; fi
-	if ([ ! -d "elf" ]); then mkdir obj; fi
+	if ([ ! -d "elf" ]); then mkdir elf; fi
 	echo "setup complete"
 debug:
 	nasm -f bin ./src/kernel-loader.asm -o ./bin/loader.bin
@@ -24,5 +24,4 @@ debug:
 	@echo "stage 2 is $(FILE_SIZE) bytes"
 	@echo "number of sectors $(NUM_SECTORS)"
 	nasm -f bin -d SECTORS=$(NUM_SECTORS) ./src/bootloader.asm -o ./bin/boot.bin
-# 	objcopy -O binary ./elf/loader.elf ./bin/loader.bin
 	cd bin && cat boot.bin loader.bin > bootloader.bin && cd ..

@@ -99,4 +99,66 @@ Essentially, it is a portion of RAM where pixel data is stored. each part of thi
 ### NMI
 stands for non maskable interrupt and unlike normal hardware interrupts, these do not get disabled using `cli`
 
-NMI is used to severe events like memory parity errors and hardware failures. NMI can interrupt code
+NMI is used to severe events like memory parity errors and hardware failures. NMI can interrupt code.
+
+### Global Descriptor Table
+GDT entries are 8 bytes long and entry zero must always be null. access entries in the table by using Segment Selectors and loading them into segmentation registers via assembly or interrupts
+
+Segment Selectors are 16 bit binary data structures. it is an index into the GDT.
+
+Each Entry in the Global Descriptor Table describes a section of memory (i.e. where it begins, how big it is, whether it is executable or writable, and its privilege level)
+
+```
+bits 0-15: limit
+bits 16-31: base
+bits 32-39: base
+bits 40-47: access byte
+bits 48-51: limit
+bits 52-55: flags
+bits 56-63: base
+```
+
+Limit is a 20 bit value and it informs the CPU how far into this segment a program is allowed to access. for example, if a segment started at 0x100000 then you could access through 0x100FFF until a general protection fault is thrown.
+
+0xfffff is about 1 mb. the granularity bit being zero means limit is measured in bytes, but if G=0 then the limit is measured in 4kb pages instead
+
+Base address is a 32bit value indicating where the segment begins
+
+Access byte
+```
+bit 0: A
+bit 1: RW
+bit 2: DC
+bit 3: E
+bit 4: S
+bit 5: DPL
+bit 6: DPL
+bit 7: P
+```
+
+P = present bit. must be set to 1 for it to be a valid segment
+
+RW = readable / writeable bit. for data segments, 1 for writeable and 0 for not. for code, 1 for read access allowed, 0 for not.
+
+DC = direction bit / conforming bit. for data, 0 means segment grows up, 1 means it grows down. for code, 1 means code can be executed from an equal or lower privilege level.
+
+E = Executable bit. 0 means descriptor defines a data segment. 1 means code.
+
+S = Descriptor type bit. 0 means system segment, 1 means data or code segment
+
+DPL = privilege level field. 0 is highest privilege, 3 is user
+
+A = accessed bit CPU will set it when the segment is accessed unless set to 1 in advance. usually set to 1.
+
+
+Flags:
+```
+bit 0: reserved
+bit 1: L
+bit 2: DB
+bit 3: G
+```
+
+L: long mode code flag
+DB: size flag. 0 means 16 bit protected mode segment, 1 means 32 bit protected mode segment. GDT can have both types at the same time
+G: granularity flag
