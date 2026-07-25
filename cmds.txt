@@ -5,3 +5,5 @@ qemu-system-x86_64 -hda ./bin/bootloader.bin
 qemu-system-x86_64 -hda ./bin/bootloader.bin -vga std -s -S
 
 qemu-system-x86_64 -hda ./bin/bootloader.bin -vga std
+
+set architecture i386:x86-64 -> to get rid of incomaptible architecutre problem

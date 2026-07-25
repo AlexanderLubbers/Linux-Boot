@@ -89,17 +89,22 @@ _start:
 
     call frame_buffer
 
-    call switch_video_mode
+    ; call switch_video_mode
 
     ; switch to protected mode
+    cli
+    call disable_nmi
+    lgdt [gdt_descriptor]
+    mov eax, cr0
+    or al, 1 ; set protected mode enable bit in control register 0
+    mov cr0, eax
 
-    ; switchs to long mode
-
-    mov si, end_msg
-    call print
+    jmp 0x08:pm_main
 
 hang:
     jmp hang
+
+
 
 get_memory_map:
     mov ax, entry_start_segment
@@ -317,6 +322,49 @@ print:
 .done:
     ret
 
+[BITS 32]
+pm_main:
+    ; set up the stack
+    mov ax, 0x10 ; data offset
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov ss, ax
+    mov gs, ax
+
+    mov ebp, 0x7c00
+    mov esp, ebp
+
+    mov eax, 0x12345678 ; test code remove later
+    push eax
+    pop ebx
+
+    mov esi, debug
+    call print_string
+
+protected_hang:
+    hlt
+    jmp protected_hang
+
+print_string:
+    mov ebx, 0xB8000
+
+.next:
+    lodsb               ; AL = [ESI], ESI++
+    cmp al, 0
+    jz .done
+
+    mov [ebx], al       ; Character
+    inc ebx
+
+    mov byte [ebx], 0x0F ; White on black
+    inc ebx
+
+    jmp .next
+
+.done:
+    ret
+
 section .data
 
 video_mode_location: dw 1    
@@ -332,10 +380,37 @@ iend
 
 section .rodata
 
-memory_err : db "Error Reading Memory Map", 13, 10, 0
-boot_msg : db "Please select an operating system", 13, 10, 0 ; 13 = carriage return (move cursor to beginning of current line)
-end_msg : db "end", 13, 10, 0 ; 10 = line feed (move cursor down one line)
-video_err : db "Error while detecting video modes", 13, 10, 0
-video_detail_err : db "Unable to retrieve video mode info", 13, 10, 0 ; error reading video mode info, or video mode list is empty
-video_switch_err : db "Failed to switch to graphical video mode", 13, 10, 0
+memory_err: db "Error Reading Memory Map", 13, 10, 0
+boot_msg: db "Please select an operating system", 13, 10, 0 ; 13 = carriage return (move cursor to beginning of current line)
+end_msg: db "end", 13, 10, 0 ; 10 = line feed (move cursor down one line)
+video_err: db "Error while detecting video modes", 13, 10, 0
+video_detail_err: db "Unable to retrieve video mode info", 13, 10, 0 ; error reading video mode info, or video mode list is empty
+video_switch_err: db "Failed to switch to graphical video mode", 13, 10, 0
 no_modes_err: db "No Valid Video Modes", 13, 10, 0
+debug: db "Entered Protected Mode", 0
+
+gdt:
+    ; first gdt entry must be null
+    dd 0x0
+    dd 0x0
+
+    ; code segment descriptor
+    dw 0xffff ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 10011010b ; access byte
+    db 11001111b ; flags
+    db 0x00 ; base
+
+    ; data segment descriptor
+    dw 0xffff ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 10010010b ; access byte
+    db 11001111b ; flags + limit
+    db 0x00 ; base
+gdt_end:
+
+gdt_descriptor:
+    dw gdt_end - gdt - 1
+    dd gdt
