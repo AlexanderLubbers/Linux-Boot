@@ -88,8 +88,12 @@ _start:
     call find_best_mode
 
     call frame_buffer
+    
+    mov ax, [frame_buffer_location]
+    add ax, 0x100
+    mov word [cpuid_location], ax
 
-    ; call switch_video_mode
+    call switch_video_mode
 
     ; switch to protected mode
     cli
@@ -369,6 +373,7 @@ section .data
 
 video_mode_location: dw 1    
 frame_buffer_location: dw 1
+cpuid_location: dw 1
 best_video_mode: dw 1
 best_resolution: dd 1
 best_color_depth: dd 1
