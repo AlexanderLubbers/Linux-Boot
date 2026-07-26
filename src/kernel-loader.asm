@@ -15,6 +15,8 @@ entry_start_segment equ 0x0000
 
 kernel_address equ 0x100000
 
+cpuid_edx_ext_feat_lm equ 1 << 29
+
 struc VesaInfoBlock				;	VesaInfoBlock_size = 512 bytes
 	.Signature		resb 4		;	must be 'VESA'
 	.Version		resw 1
@@ -77,6 +79,8 @@ section .text
 global _start
 
 _start:
+    mov [boot_drive], dl
+    mov dword [kernel_load_address], kernel_address
     cld
     ; detecting memory map
     call get_memory_map
@@ -91,7 +95,7 @@ _start:
     
     mov ax, [frame_buffer_location]
     add ax, 0x100
-    mov word [cpuid_location], ax
+    mov word [rsdp_location], ax
 
     call switch_video_mode
 
@@ -343,40 +347,58 @@ pm_main:
     push eax
     pop ebx
 
-    mov esi, debug
-    call print_string
+    xor eax, eax
+    call check_cpuid
+    cmp eax, 0x0
+    je no_long_mode
+
+    call test_long_mode
+
+
+no_long_mode:
+    mov eax, 0 ; temp
 
 protected_hang:
     hlt
     jmp protected_hang
 
-print_string:
-    mov ebx, 0xB8000
+; Check whether the processor supports CPUID. do this by testing the ID bit in EFLAGS
+; This bit is only modifiable if CPUID is supported.
+; set eax equal to zero and call this function. if eax is non-zero, then CPUID is supported
+check_cpuid:
+    pushfd ; save EFLAGS
+    pushfd ; store EFLAGS
+    xor dword [esp], 0x00200000 ; invert ID bit
+    popfd ; loaded the stored flags
+    pushfd ; then store the flags again
+    pop eax
+    xor eax, [esp] ; eax becomes whichever bits were changed
+    popfd ; restore the original flags
+    and eax, 0x00200000
+    ret ; eax becomes zero if the ID bit cannot be changed
 
-.next:
-    lodsb               ; AL = [ESI], ESI++
-    cmp al, 0
-    jz .done
 
-    mov [ebx], al       ; Character
-    inc ebx
-
-    mov byte [ebx], 0x0F ; White on black
-    inc ebx
-
-    jmp .next
-
-.done:
+test_long_mode:
+    mov eax, 0x80000000 ; extended CPUID leaf
+    cpuid ; eax contains the highest supported extended CPUID leaf
+    cmp eax, 0x80000001 ; check whether CPU supports the minimum leaf
+    jb no_long_mode
+    mov eax, 0x80000001
+    cpuid
+    test edx, cpuid_edx_ext_feat_lm
+    jz no_long_mode
     ret
 
 section .data
 
 video_mode_location: dw 1    
 frame_buffer_location: dw 1
-cpuid_location: dw 1
+rsdp_location: dw 1
 best_video_mode: dw 1
 best_resolution: dd 1
 best_color_depth: dd 1
+boot_drive: db 1
+kernel_load_address: dd 1
 
 align 4
 VesaModeInfoBlockBuffer:	istruc VesaModeInfoBlock

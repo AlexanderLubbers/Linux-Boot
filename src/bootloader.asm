@@ -66,6 +66,8 @@ continue:
     jne reload
     
 load_kernel_loader:
+    xor dl, dl
+    mov dl, [boot_drive]
     push 0x7e00 ; push address of stage 2 to top of stack
     ret ; pop it from top of the stack and jump to it
 
