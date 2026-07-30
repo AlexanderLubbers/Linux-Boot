@@ -93,9 +93,23 @@ _start:
 
     call frame_buffer
     
+    ; store boot drive in memory
     mov ax, [frame_buffer_location]
     add ax, 0x100
-    mov word [rsdp_location], ax
+    mov word [boot_drive_location], ax
+    mov ax, 0x0
+    mov es, ax
+    mov di, [boot_drive_location]
+    mov al, [boot_drive]
+    mov [es:di], al
+
+    ; store kernel load address in memory
+    add di, 0x1
+    mov [kernel_load_address_location], di
+    mov eax, [kernel_load_address]
+    mov [es:di], eax
+    add di, 0x4
+    mov [page_table_location], di
 
     call switch_video_mode
 
@@ -353,6 +367,7 @@ pm_main:
     je no_long_mode
 
     call test_long_mode
+    jmp protected_hang
 
 
 no_long_mode:
@@ -389,11 +404,22 @@ test_long_mode:
     jz no_long_mode
     ret
 
+setup_paging:
+
+    ret
+
+enable_paging:
+
+    ret
+
 section .data
 
 video_mode_location: dw 1    
 frame_buffer_location: dw 1
 rsdp_location: dw 1
+boot_drive_location: dw 1
+kernel_load_address_location: dw 1
+page_table_location: dw 1
 best_video_mode: dw 1
 best_resolution: dd 1
 best_color_depth: dd 1

@@ -162,3 +162,43 @@ bit 3: G
 L: long mode code flag
 DB: size flag. 0 means 16 bit protected mode segment, 1 means 32 bit protected mode segment. GDT can have both types at the same time
 G: granularity flag
+
+### Page Table
+There is a virtual address space (logical memory address used by a program) and a physical address space (RAM). Page tables are the translation between the two.
+
+```
+Virtual Address
+        │
+        ▼
+PML4
+        │
+        ▼
+PDPT
+        │
+        ▼
+Page Directory
+        │
+        ▼
+Page Table
+        │
+        ▼
+Physical Page
+```
+
+There are multiple tables for resource efficiency. each table maps to another table until you reach the physical address
+
+PML4 table answeres the question of which chunk of virtual memory is the virtual address inside?
+
+each section of the PML4 points to a section of PDPT and PDPT further divides the virtual address space
+
+PDPT points to a page directory which further narrows down the virtual address space before we finally reach a page table
+
+Virtual Address space is pretty much always way bigger than physical address space
+
+Not all virtual pages have to be backed by physical RAM at the same time. Pages can be brought into RAM only when they are needed.
+
+A page is simply a fixed size block of memory. the standard page size is typically 4KiB
+
+In the context of Intel, every page table occupies one page, therefore, every page table is 4KiB
+
+virtual addresses typically start at 0x1000 which is one page after 0. 0 is avoided because mapping 0x0 to vaid memory addresses can introduce bugs that are hard to fix
