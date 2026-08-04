@@ -17,6 +17,21 @@ kernel_address equ 0x100000
 
 cpuid_edx_ext_feat_lm equ 1 << 29
 
+; lower bits are reserved for flags
+pt_address_mask equ 0xffffffffff000
+pt_present equ 1                 ; marks the entry as in use
+pt_readable equ 2                ; marks the entry as r/w. 0 = readable only
+
+
+cr4_page_enable equ 1 << 5
+
+cpuid_get_features equ 7
+cpuid_features_pml5 equ 1 << 16
+
+
+cr4_la57 equ 1 << 12
+
+
 struc VesaInfoBlock				;	VesaInfoBlock_size = 512 bytes
 	.Signature		resb 4		;	must be 'VESA'
 	.Version		resw 1
@@ -109,7 +124,11 @@ _start:
     mov eax, [kernel_load_address]
     mov [es:di], eax
     add di, 0x4
-    mov [page_table_location], di
+    ; align memory to 4 kib boundary
+    add di, 0x0FFF
+    and di, 0xF000
+
+    mov [page_start], di
 
     call switch_video_mode
 
@@ -404,12 +423,130 @@ test_long_mode:
     jz no_long_mode
     ret
 
-setup_paging:
+prepare_paging:
+    ; inform the CPU of the PML4's physical address
+    mov eax, [page_start]
+    mov edi, eax
+    mov cr3, edi
 
+    mov eax, [five_level_paging_supported]
+    cmp eax, 1
+    je .five_level_paging
+
+    xor eax, eax ; 0x00000000 to clear memory
+    mov ecx, 4096 ; how many double words to write to memory pointed to by edi
+    rep stosd ; 4 * 4096 bytes for 4 page tables
+    mov edi, cr3
+    jmp .done
+
+; prepare memory for 5 level paging
+.five_level_paging:
+    xor eax, eax
+    mov ecx, 5120
+    rep stosd ; 4 * 5120 bytes for 5 page tables
+.done:
+    mov edi, cr3 ; move di back to beginning of page table
+    ret
+
+initialize_page_addresses:
+    mov eax, [five_level_paging_supported]
+    cmp eax, 1
+    mov eax, [page_start]
+    je .five
+    mov [pml4_location], eax
+    add eax, 0x1000
+    mov [pdpt_location], eax
+    add eax, 0x1000
+    mov [page_directory_location], eax
+    add eax, 0x1000
+    mov [page_table_location], eax
+    jmp .done
+.five:
+    mov [pml5_location], eax
+    add eax, 0x1000
+    mov [pml4_location], eax
+    add eax, 0x1000
+    mov [pdpt_location], eax
+    add eax, 0x1000
+    mov [page_directory_location], eax
+    add eax, 0x1000
+    mov [page_table_location], eax
+.done:
+    ret
+
+; links together PML4, PDPT, page directory, page table
+link_4_paging:
+    ; link first entries of each table, all other entries remain un-mapped
+    mov dword [edi], [pdpt_location] & pt_address_mask | pt_present | pt_readable ; first PML4 entry points to PDPT
+    mov edi, [pdpt_location]
+    mov dword [edi], [page_directory_location] & pt_address_mask | pt_present | pt_readable ; first PDPT entry points to page directory
+    mov edi, [page_directory_location]
+    mov dword [edi], [page_table_location] & pt_address_mask | pt_present | pt_readable ; first page directory entry points to page table
+    ret
+; links together PML5, PML4, PDPT, page directory, page table
+link_5_paging:
+    mov dword [edi], [pml4_location] & pt_address_mask | pt_present | pt_readable ; first PML5 entry points to PML4 table
+    mov edi, [pml4_location]
+    mov dword [edi], [pdpt_location] & pt_address_mask | pt_present | pt_readable
+    mov edi, [pdpt_location]
+    mov dword [edi], [page_directory_location] & pt_address_mask | pt_present | pt_readable
+    mov edi, [page_directory_location]
+    mov dword [edi], [page_table_location] & pt_address_mask | pt_present | pt_readable
     ret
 
 enable_paging:
+    mov eax, [pml5_supported]
+    cmp eax, 1
+    je .5_level_supported
+    call link_4_paging
+    jmp .fill_table
+    
+.5_level_supported:
+    call link_5_paging
 
+.fill_table:
+    ; fill page table
+    mov edi, [page_table_location]
+    mov ebx, pt_present | pt_readable
+    mov ecx, 512
+
+    ; identity mapping (ex: virtual address 0x1000 maps to physical address 0x1000)
+.set_entry:
+    mov dword [edi], ebx
+    add ebx, 0x1000
+    add edi, 8 ; 8 is size of page table entry in bytes
+    loop .set_entry
+
+    call enable_pae
+    ret
+; enable phyiscal address extension
+enable_pae:
+    mov eax, cr4
+    or eax, cr4_page_enable
+    mov cr4, eax
+    ret
+; check whether level 5 paging is supported
+; ecx will be set to 0 if level 5 paging is not supported
+; ecx will be set to 1 if level 5 paging is supported
+pml5_supported:
+    mov eax, cpuid_get_features
+    xor ecx, ecx
+    cpuid
+    test ecx cpuid_features_pml5
+    jnz
+.not_supported:
+    xor ecx, ecx
+    jmp .done
+.supported:
+    xor ecx, ecx
+    mov ecx, 1
+.done:
+    ret
+
+enable_pml5:
+    mov eax, cr4
+    or eax, cr4_la57
+    mov cr4, eax
     ret
 
 section .data
@@ -425,7 +562,13 @@ best_resolution: dd 1
 best_color_depth: dd 1
 boot_drive: db 1
 kernel_load_address: dd 1
-
+five_level_paging_supported: db 0
+pml5_location: dw 1
+pml4_location: dw 1
+pdpt_location: dw 1
+page_directory_location: dw 1
+page_table_location: dw 1
+page_start: dw 1
 align 4
 VesaModeInfoBlockBuffer:	istruc VesaModeInfoBlock
 	times VesaModeInfoBlock_size db 0

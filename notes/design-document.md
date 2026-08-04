@@ -185,6 +185,8 @@ Page Table
 Physical Page
 ```
 
+the page tables ultimately end up looking like a tree.
+
 There are multiple tables for resource efficiency. each table maps to another table until you reach the physical address
 
 PML4 table answeres the question of which chunk of virtual memory is the virtual address inside?
@@ -197,8 +199,28 @@ Virtual Address space is pretty much always way bigger than physical address spa
 
 Not all virtual pages have to be backed by physical RAM at the same time. Pages can be brought into RAM only when they are needed.
 
+the page tables ultimately end up looking like a tree. PML4 has 512 entries, each of those entries points to a PDPT and each entry in the PDPT points to a page directory. so in reality there are a great many Page Tables that exist
+
 A page is simply a fixed size block of memory. the standard page size is typically 4KiB
 
 In the context of Intel, every page table occupies one page, therefore, every page table is 4KiB
 
 virtual addresses typically start at 0x1000 which is one page after 0. 0 is avoided because mapping 0x0 to vaid memory addresses can introduce bugs that are hard to fix
+
+page tables map pages not addresses, so since every page is 4KiB, page at 0x1000 means 0x1000-0x1FFF
+
+page table entry typically looks like this
+
+
+```
+63                      12 11        0
++-------------------------+-----------+
+| Physical Address        | Flags     |
++-------------------------+-----------+
+```
+
+for the bootloader only one of each table is needed so only 16 KiB of RAM is needed. but what if I wanted to use all of the entries in each table, then the amount of RAM needed would be 1 PML4 * 512 PDPT * 512^2 PDT * 512^3 page tables * 4 kib = about 513 GiB. this situation is rare. no operating system needs that much virtual address space
+
+whenever another page table is needed, it is allocated and then it as added to the "tree". if another page directory is needed, then the next entry in the PDPT is pointed to a newly allocaated page directory and then the page table is added to the newly allocated page directory, etc
+
+in the virtual address, the specific bits inform the CPU where to go from the PML4 to the PDPT to the page directory to the page table to the physical page. In page tables, you assign specific physical pages to virtual pages.
