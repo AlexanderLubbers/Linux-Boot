@@ -224,3 +224,29 @@ for the bootloader only one of each table is needed so only 16 KiB of RAM is nee
 whenever another page table is needed, it is allocated and then it as added to the "tree". if another page directory is needed, then the next entry in the PDPT is pointed to a newly allocaated page directory and then the page table is added to the newly allocated page directory, etc
 
 in the virtual address, the specific bits inform the CPU where to go from the PML4 to the PDPT to the page directory to the page table to the physical page. In page tables, you assign specific physical pages to virtual pages.
+
+### Long mode versus Compatibility mode?
+
+CPU determines which mode by looking at the loaded code segment
+
+every single time a far jump occurs, CPU could change how it interprets instructions.
+
+In order to execute 32bit code in long mode, the CPU uses compatibility mode
+
+
+### Precedence
+
+Parentheses (...)
+
+Unary operators (-, ~, etc.)
+
+Multiplication, division, shifts (*, /, %, <<, >>)
+
+Addition/subtraction (+, -)
+
+Bitwise AND (&)
+
+Bitwise XOR (^)
+
+Bitwise OR (|)
+

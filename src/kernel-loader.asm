@@ -31,6 +31,28 @@ cpuid_features_pml5 equ 1 << 16
 
 cr4_la57 equ 1 << 12
 
+; efer stands for extended feature enable register
+; msr stands for model specific register
+efer_msr equ 0xC0000080
+efer_lm_enable equ 1 << 8
+
+cr0_pg_enable equ 1 << 31
+
+
+
+present equ 1 << 7
+not_sys equ 1 << 4
+exec equ 1 << 3
+dc equ 1 << 2
+rw equ 1 << 1
+accessed equ 1 << 0
+
+gran_4k equ 1 << 7
+sz_32 equ 1 << 6
+long_mode equ 1 << 5
+
+
+
 
 struc VesaInfoBlock				;	VesaInfoBlock_size = 512 bytes
 	.Signature		resb 4		;	must be 'VESA'
@@ -376,16 +398,28 @@ pm_main:
     mov ebp, 0x7c00
     mov esp, ebp
 
-    mov eax, 0x12345678 ; test code remove later
-    push eax
-    pop ebx
-
     xor eax, eax
     call check_cpuid
     cmp eax, 0x0
     je no_long_mode
 
     call test_long_mode
+
+    call pml5_supported
+    mov [pml5_supported], ecx
+
+    call enable_pml5
+    
+    call initialize_page_addresses
+
+    call prepare_paging
+
+    call enable_paging
+
+    call configure_cpu
+
+    call switch_to_long
+    
     jmp protected_hang
 
 
@@ -476,22 +510,43 @@ initialize_page_addresses:
 
 ; links together PML4, PDPT, page directory, page table
 link_4_paging:
+    mov ecx, [pdpt_location]
+    or ecx, pt_present
+    or ecx, pt_readable
     ; link first entries of each table, all other entries remain un-mapped
-    mov dword [edi], [pdpt_location] & pt_address_mask | pt_present | pt_readable ; first PML4 entry points to PDPT
+    mov dword [edi], ecx ; first PML4 entry points to PDPT
     mov edi, [pdpt_location]
-    mov dword [edi], [page_directory_location] & pt_address_mask | pt_present | pt_readable ; first PDPT entry points to page directory
+    mov ecx, [page_directory_location]
+    or ecx, pt_present
+    or ecx, pt_readable
+    mov dword [edi], ecx ; first PDPT entry points to page directory
     mov edi, [page_directory_location]
-    mov dword [edi], [page_table_location] & pt_address_mask | pt_present | pt_readable ; first page directory entry points to page table
+    mov ecx, [page_table_location]
+    or ecx, pt_present
+    or ecx, pt_readable
+    mov dword [edi], ecx ; first page directory entry points to page table
     ret
 ; links together PML5, PML4, PDPT, page directory, page table
 link_5_paging:
-    mov dword [edi], [pml4_location] & pt_address_mask | pt_present | pt_readable ; first PML5 entry points to PML4 table
+    mov ecx, [pml4_location]
+    or ecx, pt_present
+    or ecx, pt_readable
+    mov dword [edi], ecx ; first PML5 entry points to PML4 table
     mov edi, [pml4_location]
-    mov dword [edi], [pdpt_location] & pt_address_mask | pt_present | pt_readable
+    mov ecx, [pdpt_location]
+    or ecx, pt_present
+    or ecx, pt_readable
+    mov dword [edi], ecx
     mov edi, [pdpt_location]
-    mov dword [edi], [page_directory_location] & pt_address_mask | pt_present | pt_readable
+    mov ecx, [page_directory_location]
+    or ecx, pt_present
+    or ecx, pt_readable
+    mov dword [edi], ecx
     mov edi, [page_directory_location]
-    mov dword [edi], [page_table_location] & pt_address_mask | pt_present | pt_readable
+    mov ecx, [page_table_location]
+    or ecx, pt_present
+    or ecx, pt_readable
+    mov dword [edi], ecx
     ret
 
 enable_paging:
@@ -500,7 +555,7 @@ enable_paging:
     je .5_level_supported
     call link_4_paging
     jmp .fill_table
-    
+
 .5_level_supported:
     call link_5_paging
 
@@ -518,6 +573,20 @@ enable_paging:
     loop .set_entry
 
     call enable_pae
+
+; configure the CPU to enter long mode
+configure_cpu:
+    mov ecx, efer_msr
+    rdmsr ; read msr in ecx register
+    or eax, efer_lm_enable
+    wrmsr ; write msr whose number is in ecx
+
+    ; enable paging
+    mov eax, cr0
+    or eax, cr0_pg_enable
+    mov cr0, eax
+
+.done:
     ret
 ; enable phyiscal address extension
 enable_pae:
@@ -532,8 +601,8 @@ pml5_supported:
     mov eax, cpuid_get_features
     xor ecx, ecx
     cpuid
-    test ecx cpuid_features_pml5
-    jnz
+    test ecx, cpuid_features_pml5
+    jnz .supported
 .not_supported:
     xor ecx, ecx
     jmp .done
@@ -544,10 +613,37 @@ pml5_supported:
     ret
 
 enable_pml5:
+    mov eax, [pml5_supported]
+    cmp eax, 1
+    jne .done ; pml5 is not supported
     mov eax, cr4
     or eax, cr4_la57
     mov cr4, eax
+.done:
     ret
+
+switch_to_long:
+    lgdt [long_gdt.Pointer]
+    jmp long_gdt.Code:long_main
+
+
+[bits 64]
+
+long_main:
+    mov ax, long_gdt.Data
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
+    mov rax, 0x1122334455667788
+    mov rbx, 0x1122334455667788
+
+    cmp rax, rbx
+
+long_hang:
+    jmp long_hang
 
 section .data
 
@@ -556,7 +652,6 @@ frame_buffer_location: dw 1
 rsdp_location: dw 1
 boot_drive_location: dw 1
 kernel_load_address_location: dw 1
-page_table_location: dw 1
 best_video_mode: dw 1
 best_resolution: dd 1
 best_color_depth: dd 1
@@ -610,3 +705,25 @@ gdt_end:
 gdt_descriptor:
     dw gdt_end - gdt - 1
     dd gdt
+
+
+long_gdt:
+    .Null: equ $ - long_gdt
+        dq 0
+    .Code: equ $ - long_gdt
+        .Code.limit_lo: dw 0xffff
+        .Code.base_lo: dw 0
+        .Code.base_mid: db 0
+        .Code.access: db present | not_sys | exec | rw
+        .Code.flags: db gran_4k | long_mode | 0xF   ; Flags & Limit (high, bits 16-19)
+        .Code.base_hi: db 0
+    .Data: equ $ - long_gdt
+        .Data.limit_lo: dw 0xffff
+        .Data.base_lo: dw 0
+        .Data.base_mid: db 0
+        .Data.access: db present | not_sys | rw
+        .Data.Flags: db gran_4k | sz_32 | 0xF       ; Flags & Limit (high, bits 16-19)
+        .Data.base_hi: db 0
+    .Pointer:
+        dw $ - long_gdt - 1
+        dq long_gdt
