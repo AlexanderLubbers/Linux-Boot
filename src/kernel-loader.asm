@@ -406,7 +406,7 @@ pm_main:
     call test_long_mode
 
     call pml5_supported
-    mov [pml5_supported], ecx
+    mov [pml5_is_supported], ecx
 
     call enable_pml5
     
@@ -459,12 +459,12 @@ test_long_mode:
 
 prepare_paging:
     ; inform the CPU of the PML4's physical address
-    mov eax, [page_start]
+    mov ax, [page_start]
     mov edi, eax
     mov cr3, edi
 
-    mov eax, [five_level_paging_supported]
-    cmp eax, 1
+    mov al, [pml5_is_supported]
+    cmp al, 1
     je .five_level_paging
 
     xor eax, eax ; 0x00000000 to clear memory
@@ -483,75 +483,76 @@ prepare_paging:
     ret
 
 initialize_page_addresses:
-    mov eax, [five_level_paging_supported]
-    cmp eax, 1
-    mov eax, [page_start]
+    mov al, [pml5_is_supported]
+    cmp al, 1
     je .five
-    mov [pml4_location], eax
-    add eax, 0x1000
-    mov [pdpt_location], eax
-    add eax, 0x1000
-    mov [page_directory_location], eax
-    add eax, 0x1000
-    mov [page_table_location], eax
+    mov ax, [page_start]
+    mov [pml4_location], ax
+    add ax, 0x1000
+    mov [pdpt_location], ax
+    add ax, 0x1000
+    mov [page_directory_location], ax
+    add ax, 0x1000
+    mov [page_table_location], ax
     jmp .done
 .five:
-    mov [pml5_location], eax
-    add eax, 0x1000
-    mov [pml4_location], eax
-    add eax, 0x1000
-    mov [pdpt_location], eax
-    add eax, 0x1000
-    mov [page_directory_location], eax
-    add eax, 0x1000
-    mov [page_table_location], eax
+    mov ax, [page_start]
+    mov [pml5_location], ax
+    add ax, 0x1000
+    mov [pml4_location], ax
+    add ax, 0x1000
+    mov [pdpt_location], ax
+    add ax, 0x1000
+    mov [page_directory_location], ax
+    add ax, 0x1000
+    mov [page_table_location], ax
 .done:
     ret
 
 ; links together PML4, PDPT, page directory, page table
 link_4_paging:
-    mov ecx, [pdpt_location]
+    mov cx, [pdpt_location]
     or ecx, pt_present
     or ecx, pt_readable
     ; link first entries of each table, all other entries remain un-mapped
     mov dword [edi], ecx ; first PML4 entry points to PDPT
-    mov edi, [pdpt_location]
-    mov ecx, [page_directory_location]
+    mov di, [pdpt_location]
+    mov cx, [page_directory_location]
     or ecx, pt_present
     or ecx, pt_readable
     mov dword [edi], ecx ; first PDPT entry points to page directory
-    mov edi, [page_directory_location]
-    mov ecx, [page_table_location]
+    mov di, [page_directory_location]
+    mov cx, [page_table_location]
     or ecx, pt_present
     or ecx, pt_readable
     mov dword [edi], ecx ; first page directory entry points to page table
     ret
 ; links together PML5, PML4, PDPT, page directory, page table
 link_5_paging:
-    mov ecx, [pml4_location]
+    mov cx, [pml4_location]
     or ecx, pt_present
     or ecx, pt_readable
     mov dword [edi], ecx ; first PML5 entry points to PML4 table
-    mov edi, [pml4_location]
-    mov ecx, [pdpt_location]
+    mov di, [pml4_location]
+    mov cx, [pdpt_location]
     or ecx, pt_present
     or ecx, pt_readable
     mov dword [edi], ecx
-    mov edi, [pdpt_location]
-    mov ecx, [page_directory_location]
+    mov di, [pdpt_location]
+    mov cx, [page_directory_location]
     or ecx, pt_present
     or ecx, pt_readable
     mov dword [edi], ecx
-    mov edi, [page_directory_location]
-    mov ecx, [page_table_location]
+    mov di, [page_directory_location]
+    mov cx, [page_table_location]
     or ecx, pt_present
     or ecx, pt_readable
     mov dword [edi], ecx
     ret
 
 enable_paging:
-    mov eax, [pml5_supported]
-    cmp eax, 1
+    mov al, [pml5_is_supported]
+    cmp al, 1
     je .5_level_supported
     call link_4_paging
     jmp .fill_table
@@ -561,7 +562,7 @@ enable_paging:
 
 .fill_table:
     ; fill page table
-    mov edi, [page_table_location]
+    mov di, [page_table_location]
     mov ebx, pt_present | pt_readable
     mov ecx, 512
 
@@ -613,7 +614,7 @@ pml5_supported:
     ret
 
 enable_pml5:
-    mov eax, [pml5_supported]
+    mov al, [pml5_is_supported]
     cmp eax, 1
     jne .done ; pml5 is not supported
     mov eax, cr4
@@ -657,7 +658,7 @@ best_resolution: dd 1
 best_color_depth: dd 1
 boot_drive: db 1
 kernel_load_address: dd 1
-five_level_paging_supported: db 0
+pml5_is_supported: db 0
 pml5_location: dw 1
 pml4_location: dw 1
 pdpt_location: dw 1
