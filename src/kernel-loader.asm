@@ -638,6 +638,11 @@ long_main:
     mov gs, ax
     mov ss, ax
 
+    ; stack grows downward
+    ; place top of stack at the top of the free memory region. it will grow towards smaller addresses
+    mov rbp, 0x7FFFF
+    mov rsp, rbp
+
     mov rax, 0x1122334455667788
     mov rbx, 0x1122334455667788
 
@@ -645,6 +650,26 @@ long_main:
 
 long_hang:
     jmp long_hang
+
+
+print_string:
+    mov rbx, 0xB8000
+
+.print_loop:
+    mov al, [rsi]
+    test al, al
+    jz .done
+
+    mov [rbx], al
+    mov byte [rbx + 1], 0x07
+
+    add rbx, 2
+    inc rsi
+
+    jmp .print_loop
+
+.done:
+    ret
 
 section .data
 
@@ -679,7 +704,7 @@ video_err: db "Error while detecting video modes", 13, 10, 0
 video_detail_err: db "Unable to retrieve video mode info", 13, 10, 0 ; error reading video mode info, or video mode list is empty
 video_switch_err: db "Failed to switch to graphical video mode", 13, 10, 0
 no_modes_err: db "No Valid Video Modes", 13, 10, 0
-debug: db "Entered Protected Mode", 0
+debug: db "Entered Long Mode", 0
 
 gdt:
     ; first gdt entry must be null
