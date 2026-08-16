@@ -250,3 +250,109 @@ Bitwise XOR (^)
 
 Bitwise OR (|)
 
+
+### Linkers
+
+map text and data to memory addresses and also determine the memory layout of the final executable.
+
+links together object files
+
+KEEP() ensures item inside does not get removed by the garbage collector
+
+. keeps track of current location in memory
+
+### ELF
+
+elf header contains important metadata about the elf file
+
+```
+#define EI_NIDENT 16
+
+typedef struct {
+        unsigned char   e_ident[EI_NIDENT];
+        Elf32_Half      e_type;
+        Elf32_Half      e_machine;
+        Elf32_Word      e_version;
+        Elf32_Addr      e_entry;
+        Elf32_Off       e_phoff;
+        Elf32_Off       e_shoff;
+        Elf32_Word      e_flags;
+        Elf32_Half      e_ehsize;
+        Elf32_Half      e_phentsize;
+        Elf32_Half      e_phnum;
+        Elf32_Half      e_shentsize;
+        Elf32_Half      e_shnum;
+        Elf32_Half      e_shstrndx;
+} Elf32_Ehdr;
+
+typedef struct {
+        unsigned char   e_ident[EI_NIDENT];
+        Elf64_Half      e_type;
+        Elf64_Half      e_machine;
+        Elf64_Word      e_version;
+        Elf64_Addr      e_entry;
+        Elf64_Off       e_phoff;
+        Elf64_Off       e_shoff;
+        Elf64_Word      e_flags;
+        Elf64_Half      e_ehsize;
+        Elf64_Half      e_phentsize;
+        Elf64_Half      e_phnum;
+        Elf64_Half      e_shentsize;
+        Elf64_Half      e_shnum;
+        Elf64_Half      e_shstrndx;
+} Elf64_Ehdr;
+```
+
+e_ident contains elf magic number
+
+and then class (0=none, 1=32bit, 2=64bit)
+
+and then data (0 = invalid, 1=lsb, 2=msb)
+
+and then version which is always 1
+
+and then os abi (0 is most common, 1=hp-ux, 2=netbsd, 3=linux)
+
+and then abi version is pretty much never used
+
+last 7 bytes are padding
+
+e_type contains:
+
+et_none 0 no file type
+
+et_rel 1 relocatable file type
+
+et_exec 2 executable file type
+
+et_dyn 3 shared object file
+
+et_core 4 core file
+
+e_machine contains:
+
+machine type. most common values are 0x03 for x86, 0x08 for MIPS, 0x28 for ARM, 0x3E for amd64, 0xB7 ARMv8, 0xF3 risc-V
+
+e_version always set to 1
+
+e_entry is entry point address for executables. no entry point means it is set to 0
+
+e_phoffs is program headers offset
+
+e_shoff is section headers offset
+
+e_flags are very architecture dependent
+
+e_phnum number of program headers
+
+e_shnum number of section headers
+
+e_shstrndex section header string table index
+
+program headers answer the question of how to load the program
+
+section headers answer the question of how this file is organized
+
+e_entry contains an address and it says after the executable has been loaded into memory start executing here
+
+pt_load describes a region of memory. for example, the first x bytes of the elf belong to a loadable memory region whose address starts at 0x7000
