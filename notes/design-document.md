@@ -356,3 +356,17 @@ section headers answer the question of how this file is organized
 e_entry contains an address and it says after the executable has been loaded into memory start executing here
 
 pt_load describes a region of memory. for example, the first x bytes of the elf belong to a loadable memory region whose address starts at 0x7000
+
+program header:
+```
+typedef struct {
+	Elf64_Word	p_type;
+	Elf64_Word	p_flags;
+	Elf64_Off	p_offset;
+	Elf64_Addr	p_vaddr;
+	Elf64_Addr	p_paddr;
+	Elf64_Xword	p_filesz;
+	Elf64_Xword	p_memsz;
+	Elf64_Xword	p_align;
+} Elf64_Phdr;
+```
