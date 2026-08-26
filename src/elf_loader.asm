@@ -1,12 +1,21 @@
 ; Loaded by stage 1 (boot sector)
 ; Loads and hands control to loader.elf to prepare computer environment and load kernel
 [BITS 16]
-[org 0x0500]
+
+%ifdef DEBUG
+%else
+    [org 0x0500]
+%endif
+
+; assumptions made
+; only one loadable section
+; no .bss
+; loader.elf is less than 64 kib
 
 ; program headers and elf header is in the first sector of the elf file
 SECTORS equ 1
 SECTOR_SIZE equ 512
-ELF_MAGIC_NUM equ 0x7f454c46
+ELF_MAGIC_NUM equ 0x464c457f
 TEMPORARY_BUFFER_LOCATION equ 0x3000
 
 struc DiskAddrPacket
@@ -19,8 +28,6 @@ endstruc
 
 elf_loader:
     mov [boot_drive], dl
-    mov si, debug_
-    call print
 
     call load_elf_header
     jc reload
@@ -50,7 +57,7 @@ verify_elf:
     mov ax, word [elf_header + 24]
     mov [entry_point], ax
 
-    mov bx, dword [elf_header + 32]
+    mov bx, word [elf_header + 32]
     mov [phoff], bx
     add bx, elf_header
 
@@ -60,14 +67,26 @@ verify_elf:
     jne invalid_elf
 
     ; determine the number of sectors to load
-    mov eax, dword [bx + 16]
-    mov [offset], eax
-    mov eax, dword [bx + 40] ; file size
-    mov [file_size], eax
-    add eax, SECTOR_SIZE - 1
-    div eax, SECTOR_SIZE
+    xor eax, eax
+    mov ax, word [bx + 0x08] ; offset from beginning of elf file
+    mov [offset], ax
+    mov ax, word [bx + 0x18] ; loadable section phyiscal address
+    mov [paddr], ax
+    mov ax, word [bx + 0x20] ; file size
+    mov [file_size], ax
+    ; calculate number of sectors to load
+    mov ax, [offset]
+    add ax, [file_size]
+    add ax, SECTOR_SIZE - 1
+    shr ax, 9
 
-    mov [ph_sectors], eax
+    mov [ph_sectors], ax
+    mov dx, load_packet ; debug statement
+    mov cx, sector ; debug statement
+    mov [load_packet + DiskAddrPacket.sectors], eax
+    xor eax, eax
+    mov ax, TEMPORARY_BUFFER_LOCATION
+    mov [load_packet + DiskAddrPacket.buffer], ax
 
 load_stage_2:
     call load_exe
@@ -79,21 +98,23 @@ transfer_exe:
     mov ax, 0
     mov es, ax
     mov di, TEMPORARY_BUFFER_LOCATION
-    add di, 64 ; move past elf header
-    add di, 56 ; move past program header
     add di, [offset] ; get to the section that must be loaded
     mov cx, [file_size]
-    mov dx, [entry_point] ; dx points to entry point of stage 2 of the bootloader
+    mov si, [paddr] ; dx points physical address of loadable segment
 .transfer_data:
     mov al, byte [di]
-    mov byte [dx], al
-    inc dx
+    mov byte [si], al
+    inc si
+    inc di
     loop .transfer_data
 
+
 go_to_entry:
+    mov dl, [boot_drive]
     mov ax, [entry_point]
     push ax
     ret
+    jmp enter_hang
 
 load_elf_header:
     mov si, pckt
@@ -121,6 +142,7 @@ reload:
 load_exe:
     mov si, load_packet
     mov ah, 0x42
+    mov dl, [boot_drive]
     int 0x13
     ret
 
@@ -130,7 +152,7 @@ reload_load_exe:
 .retry:
     mov ah, 0x00
     int 0x13
-    call reload_load_exe
+    call load_exe
 
     jc .failed
     cmp ah, 0x00
@@ -138,6 +160,7 @@ reload_load_exe:
     jmp transfer_exe
 .failed:
     loop .retry
+    jmp enter_hang
 
 print:
     cld ; reset direction flag to go forward
@@ -167,7 +190,8 @@ entry_point: dw 0
 phoff: dw 0
 offset: dw 0
 file_size: dw 0
-ph_sectors: db 0 ; program header sectors i.e. sections containing data from the pt_load section in the program header
+paddr: dw 0
+ph_sectors: dw 0 ; program header sectors i.e. sections containing data from the pt_load section in the program header
 align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary. happens during assembly time
 pckt: istruc DiskAddrPacket
     at DiskAddrPacket.size, db 0x10
@@ -181,7 +205,7 @@ align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary.
 load_packet: istruc DiskAddrPacket
     at DiskAddrPacket.size, db 0x10
     at DiskAddrPacket.reserved, db 0
-    at DiskAddrPacket.sectors, dw [ph_sectors]
+    at DiskAddrPacket.sectors, dw 0
     at DiskAddrPacket.buffer, dd TEMPORARY_BUFFER_LOCATION
     at DiskAddrPacket.address, dq sector + 1
 iend
@@ -190,7 +214,7 @@ elf_header:
     times 512 db 0
 
 
-times (512 - ($ % 512)) % 512 db 0 ; ensure that elf_loader.asm ends on a 512 byte boundary
+times (512 - (($ - $$) % 512)) % 512 db 0 ; ensure that elf_loader.asm ends on a 512 byte boundary
 ; number of sectors elf_loader occupies
-file_size equ $ - elf_loader
-sector equ (file_size + SECTOR_SIZE - 1) / SECTOR_SIZE
+elf_loader_file_size equ $ - elf_loader
+sector equ (elf_loader_file_size + SECTOR_SIZE - 1) / SECTOR_SIZE

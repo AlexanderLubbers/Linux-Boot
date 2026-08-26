@@ -2,9 +2,9 @@
 [ORG 0x7c00] ; address in which BIOS loads bootloader. tells assembler that code will be loaded at the given address
 
 %ifdef SECTORS
-    KERNEL_LOADER_SECTORS equ SECTORS
+    ELF_LOADER_SECTORS equ SECTORS
 %else
-    KERNEL_LOADER_SECTORS equ 1
+    ELF_LOADER_SECTORS equ 1
 %endif
 
 struc DiskAddressPacket
@@ -68,7 +68,7 @@ continue:
 load_kernel_loader:
     xor dl, dl
     mov dl, [boot_drive]
-    push 0x7e00 ; push address of stage 2 to top of stack
+    push 0x0500 ; push address of the elf loader onto the stack
     ret ; pop it from top of the stack and jump to it
 
 ; get whether the A20 line is enabled or not
@@ -193,8 +193,8 @@ align 4 ; insert padding so that the next thing is aligned on a 4 byte boundary.
 packet: istruc DiskAddressPacket
     at DiskAddressPacket.size, db 0x10
     at DiskAddressPacket.reserved, db 0
-    at DiskAddressPacket.sectors, dw KERNEL_LOADER_SECTORS
-    at DiskAddressPacket.buffer, dd 0x7e00
+    at DiskAddressPacket.sectors, dw ELF_LOADER_SECTORS
+    at DiskAddressPacket.buffer, dd 0x0500
     at DiskAddressPacket.address, dq 1
 iend
 

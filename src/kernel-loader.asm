@@ -115,54 +115,54 @@ section .text
 
 global _start
 
-_start:
-    mov [boot_drive], dl
-    mov dword [kernel_load_address], kernel_address
-    cld
-    ; detecting memory map
-    call get_memory_map
-    ; detect video modes
-    mov word [video_mode_location], di
-    call get_vesa
+    _start:
+        mov [boot_drive], dl
+        mov dword [kernel_load_address], kernel_address
+        cld
+        ; detecting memory map
+        call get_memory_map
+        ; detect video modes
+        mov word [video_mode_location], di
+        call get_vesa
 
-    mov word [frame_buffer_location], di
-    call find_best_mode
+        mov word [frame_buffer_location], di
+        call find_best_mode
 
-    call frame_buffer
-    
-    ; store boot drive in memory
-    mov ax, [frame_buffer_location]
-    add ax, 0x100
-    mov word [boot_drive_location], ax
-    mov ax, 0x0
-    mov es, ax
-    mov di, [boot_drive_location]
-    mov al, [boot_drive]
-    mov [es:di], al
+        call frame_buffer
+        
+        ; store boot drive in memory
+        mov ax, [frame_buffer_location]
+        add ax, 0x100
+        mov word [boot_drive_location], ax
+        mov ax, 0x0
+        mov es, ax
+        mov di, [boot_drive_location]
+        mov al, [boot_drive]
+        mov [es:di], al
 
-    ; store kernel load address in memory
-    add di, 0x1
-    mov [kernel_load_address_location], di
-    mov eax, [kernel_load_address]
-    mov [es:di], eax
-    add di, 0x4
-    ; align memory to 4 kib boundary
-    add di, 0x0FFF
-    and di, 0xF000
+        ; store kernel load address in memory
+        add di, 0x1
+        mov [kernel_load_address_location], di
+        mov eax, [kernel_load_address]
+        mov [es:di], eax
+        add di, 0x4
+        ; align memory to 4 kib boundary
+        add di, 0x0FFF
+        and di, 0xF000
 
-    mov [page_start], di
+        mov [page_start], di
 
-    call switch_video_mode
+        ; call switch_video_mode
 
-    ; switch to protected mode
-    cli
-    call disable_nmi
-    lgdt [gdt_descriptor]
-    mov eax, cr0
-    or al, 1 ; set protected mode enable bit in control register 0
-    mov cr0, eax
+        ; switch to protected mode
+        cli
+        call disable_nmi
+        lgdt [gdt_descriptor]
+        mov eax, cr0
+        or al, 1 ; set protected mode enable bit in control register 0
+        mov cr0, eax
 
-    jmp 0x08:pm_main
+        jmp 0x08:pm_main
 
 hang:
     jmp hang
@@ -647,6 +647,8 @@ long_main:
     mov rbx, 0x1122334455667788
 
     cmp rax, rbx
+    mov rsi, debug
+    call print_string
 
 long_hang:
     jmp long_hang
