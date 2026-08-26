@@ -1,11 +1,5 @@
 [BITS 16]
 
-%ifdef DEBUG
-%else
-    [ORG 0x7e00]
-%endif
-
-
 ; number of entries will be stored at this address
 entry_number_offset equ 0x0500
 entry_number_segment equ 0x0000
