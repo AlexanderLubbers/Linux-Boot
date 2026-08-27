@@ -12,9 +12,9 @@ all:
 	gcc -m64 -ffreestanding -c ./src/fat_driver.c -o ./elf/fat_driver.o
 	gcc -m64 -ffreestanding -c ./src/rsdp.c -o ./elf/rsdp.o
 	ld -T linker.ld ./elf/loader.o ./elf/fat_driver.o ./elf/rsdp.o -o ./elf/loader.elf
+	nasm -f bin ./src/elf_loader.asm -o ./bin/elf_loader.bin
 	@echo "elf loader is $(ELF_LOADER_SIZE) bytes"
 	@echo "number of sectors in elf loader $(ELF_LOADER_SECTORS)"
-	nasm -f bin ./src/elf_loader.asm -o ./bin/elf_loader.bin
 	@echo "stage 2 is $(ELF_SIZE) bytes"
 	@echo "number of sectors in stage 2 $(ELF_SECTORS)"
 	nasm -f bin -d SECTORS=$(ELF_LOADER_SECTORS) ./src/bootloader.asm -o ./bin/boot.bin
@@ -29,17 +29,15 @@ setup:
 	echo "setup complete"
 debug:
 	nasm -f elf64 ./src/kernel-loader.asm -o ./elf/loader.o
-	gcc -m64 -ffreestanding -c ./src/fat_driver.c -o ./elf/fat_driver.o
-	gcc -m64 -ffreestanding -c ./src/rsdp.c -o ./elf/rsdp.o
+	gcc -m64 -ffreestanding -c -g ./src/fat_driver.c -o ./elf/fat_driver.o
+	gcc -m64 -ffreestanding -c -g ./src/rsdp.c -o ./elf/rsdp.o
 	ld -T linker.ld ./elf/loader.o ./elf/fat_driver.o ./elf/rsdp.o -o ./elf/loader.elf
+	nasm -f bin ./src/elf_loader.asm -o ./bin/elf_loader.bin
 	@echo "elf loader is $(ELF_LOADER_SIZE) bytes"
 	@echo "number of sectors in elf loader $(ELF_LOADER_SECTORS)"
-	nasm -f bin ./src/elf_loader.asm -o ./bin/elf_loader.bin
 	@echo "stage 2 is $(ELF_SIZE) bytes"
 	@echo "number of sectors in stage 2 $(ELF_SECTORS)"
 	nasm -f bin -d SECTORS=$(ELF_LOADER_SECTORS) ./src/bootloader.asm -o ./bin/boot.bin
-	nasm -f elf32  -DDEBUG -g -F dwarf ./src/elf_loader.asm -o ./elf/elfdebug.o
-	ld -m elf_i386 -Ttext 0x0500 -o ./elf/elfdebug.elf ./elf/elfdebug.o
-	nasm -f elf32 -g -F dwarf -DDEBUG ./src/kernel-loader.asm -o ./elf/loaderdebug.o
-	ld -m elf_i386 -Ttext 0x7e00 -o ./elf/loaderdebug.elf ./elf/loaderdebug.o
+	nasm -f elf64 -g -F dwarf -DDEBUG ./src/kernel-loader.asm -o ./elf/loaderdebug.o
+	ld -T linker.ld ./elf/loaderdebug.o ./elf/fat_driver.o ./elf/rsdp.o -o ./elf/loaderdebug.elf
 	cat ./bin/boot.bin ./bin/elf_loader.bin ./elf/loader.elf > ./elf/bootloader.img

@@ -105,6 +105,9 @@ struc VesaModeInfoBlock
 	.Reserved2		resb 206
 endstruc
 
+
+extern find_rsdp
+
 section .text
 
 global _start
@@ -641,6 +644,11 @@ long_main:
     mov rbx, 0x1122334455667788
 
     cmp rax, rbx
+
+    call find_rsdp
+
+    mov [rsdp_location], rax
+    
     mov rsi, debug
     call print_string
 
@@ -686,6 +694,7 @@ pdpt_location: dw 1
 page_directory_location: dw 1
 page_table_location: dw 1
 page_start: dw 1
+rsdp_location: dd 1
 align 4
 VesaModeInfoBlockBuffer:	istruc VesaModeInfoBlock
 	times VesaModeInfoBlock_size db 0
