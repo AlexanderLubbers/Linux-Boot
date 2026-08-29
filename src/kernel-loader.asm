@@ -679,7 +679,6 @@ section .data
 
 video_mode_location: dw 1    
 frame_buffer_location: dw 1
-rsdp_location: dw 1
 boot_drive_location: dw 1
 kernel_load_address_location: dw 1
 best_video_mode: dw 1
